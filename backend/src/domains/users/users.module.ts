@@ -7,6 +7,7 @@ import { UsersPersistenceModule } from './infrastructure/persistence/persistence
 import { resolveUsersPersistenceDriver } from './infrastructure/persistence/persistence-driver.type';
 import { UsersSystemClockAdapter } from './infrastructure/services/system-clock.adapter';
 import { UsersUuidIdGeneratorAdapter } from './infrastructure/services/uuid-id-generator.adapter';
+import { UsersController } from './presentation/controllers/users.controller';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { UsersUuidIdGeneratorAdapter } from './infrastructure/services/uuid-id-g
       driver: resolveUsersPersistenceDriver(process.env.PERSISTENCE_DRIVER),
     }),
   ],
-  controllers: [],
+  controllers: [UsersController],
   providers: [
     CreateUserUseCase,
     GetUserProfileUseCase,

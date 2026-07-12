@@ -115,7 +115,28 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter la couche Presentation Users (DTO, controller, filter) et ses tests d'intégration.
+1. Intégrer le flux Auth <-> Users (création du profil Users lors de l'inscription Auth).
+
+## Etape réalisée: Presentation Users + tests d'intégration
+
+Eléments implémentés:
+
+- Controller HTTP `UsersController` avec endpoints:
+  - `POST /users` (création profil)
+  - `GET /users/:id` (lecture profil)
+- DTO de requête/réponse Users avec validation et schéma Swagger.
+- `UsersExceptionFilter` pour mapper exceptions applicatives/domaines en HTTP cohérent.
+- Tests d'intégration `users.controller.integration.spec.ts` couvrant:
+  - création et lecture profil,
+  - email en doublon (409),
+  - utilisateur inconnu (404),
+  - payload invalide (400).
+
+Décisions clés:
+
+- La présentation Users reste découplée des adapters concrets via use cases.
+- La gestion des erreurs Users suit la même stratégie centralisée que Auth.
+- Les tests d'intégration valident le contrat HTTP réel sans dépendre d'une base externe (driver in-memory).
 
 ## Etape réalisée: Infrastructure Users (Persistence + Services)
 

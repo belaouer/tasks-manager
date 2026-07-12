@@ -1,3 +1,5 @@
+import { InvalidUserEmailFormatDomainException } from '../exceptions/invalid-user-email-format.domain-exception';
+
 export class UserEmail {
   private static readonly EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -7,7 +9,7 @@ export class UserEmail {
     const normalized = value.trim().toLowerCase();
 
     if (!UserEmail.EMAIL_REGEX.test(normalized)) {
-      throw new Error('Invalid user email format.');
+      throw new InvalidUserEmailFormatDomainException();
     }
 
     return new UserEmail(normalized);
