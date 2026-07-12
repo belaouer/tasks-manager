@@ -115,7 +115,25 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la transition vers le prochain domaine (Users) sans modifier Auth existant.
+1. Implémenter le socle métier Users (Domain + Application) sans infrastructure persistante finale.
+
+## Etape réalisée: Transition vers le domaine Users
+
+Eléments implémentés:
+
+- Création du module `UsersModule` sans logique métier.
+- Branchement de `UsersModule` dans la composition racine (`AppModule`).
+- Mise en place de l'arborescence hexagonale complète `src/domains/users`:
+  - `domain` (entities, value-objects, services, ports, exceptions, factories)
+  - `application` (dto, use-cases, services)
+  - `infrastructure` (persistence/common/typeorm/prisma, services)
+  - `presentation` (controllers, dto, guards, filters, mappers)
+
+Décisions clés:
+
+- Aucun code métier Users n'est ajouté à cette étape pour isoler le changement structurel.
+- Le module Auth reste inchangé, ce qui sécurise la continuité fonctionnelle.
+- Le squelette Users suit exactement les conventions DDD + Hexagonal déjà validées sur Auth.
 
 ## Etape réalisée: Validation stricte des variables d'environnement
 
