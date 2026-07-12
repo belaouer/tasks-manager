@@ -115,7 +115,25 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter l'infrastructure Users (adapters persistence in-memory/typeorm/prisma) sans endpoint HTTP.
+1. Implémenter la couche Presentation Users (DTO, controller, filter) et ses tests d'intégration.
+
+## Etape réalisée: Infrastructure Users (Persistence + Services)
+
+Eléments implémentés:
+
+- Module dynamique `UsersPersistenceModule.register({ driver })`.
+- Drivers supportés pour Users: `in-memory`, `typeorm`, `prisma`.
+- Adapters repository Users pour chaque driver derrière le port unique `UsersRepositoryPort`.
+- Mapper persistence <-> domaine Users + store in-memory.
+- Adapters infrastructure de base: `UsersSystemClockAdapter`, `UsersUuidIdGeneratorAdapter`.
+- Branchement complet dans `UsersModule` (use cases injectables via ports abstraits).
+- Modèle Prisma `UserProfile` ajouté au schema.
+
+Décisions clés:
+
+- La couche Application Users reste inchangée: seule l'infrastructure est branchée.
+- Le choix du driver reste transparent pour les use cases grâce au port `UsersRepositoryPort`.
+- Le pattern est volontairement aligné sur Auth pour garder une architecture homogène et maintenable.
 
 ## Etape réalisée: Socle métier Users (Domain + Application)
 
