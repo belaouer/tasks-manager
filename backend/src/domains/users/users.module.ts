@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CreateUserUseCase } from './application/use-cases/create-user.use-case';
 import { GetUserProfileUseCase } from './application/use-cases/get-user-profile.use-case';
+import { UpdateUserProfileUseCase } from './application/use-cases/update-user-profile.use-case';
 import { UsersClockPort } from './domain/ports/users-clock.port';
 import { UsersIdGeneratorPort } from './domain/ports/users-id-generator.port';
 import { UsersPersistenceModule } from './infrastructure/persistence/persistence.module';
@@ -19,6 +20,7 @@ import { UsersController } from './presentation/controllers/users.controller';
   providers: [
     CreateUserUseCase,
     GetUserProfileUseCase,
+    UpdateUserProfileUseCase,
     {
       provide: UsersClockPort,
       useClass: UsersSystemClockAdapter,
@@ -28,6 +30,6 @@ import { UsersController } from './presentation/controllers/users.controller';
       useClass: UsersUuidIdGeneratorAdapter,
     },
   ],
-  exports: [CreateUserUseCase, GetUserProfileUseCase],
+  exports: [CreateUserUseCase, GetUserProfileUseCase, UpdateUserProfileUseCase],
 })
 export class UsersModule {}

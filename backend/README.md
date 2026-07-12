@@ -115,7 +115,27 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Ajouter les endpoints de mise à jour profil Users (rename) et leurs tests.
+1. Ajouter l'autorisation d'accès Users par identité authentifiée (préparation guard JWT applicatif).
+
+## Etape réalisée: Mise à jour du profil Users (rename)
+
+Eléments implémentés:
+
+- Nouveau use case `UpdateUserProfileUseCase`.
+- Nouveau command applicatif `UpdateUserProfileCommand`.
+- Endpoint `PATCH /users/:id` dans `UsersController`.
+- DTO de payload `UpdateUserProfileRequestDto` avec validation + Swagger.
+- Test unitaire du use case de mise à jour (`update-user-profile.use-case.spec.ts`).
+- Extension des tests d'intégration Users avec scénarios update:
+  - succès (200),
+  - utilisateur inconnu (404),
+  - payload invalide (400).
+
+Décisions clés:
+
+- Le renommage reste encapsulé dans le domaine (`User.updateName`) pour préserver les invariants.
+- Le contrôleur ne contient aucune logique métier: orchestration via use case uniquement.
+- Les erreurs applicatives/domaines réutilisent le filtre Users déjà centralisé.
 
 ## Etape réalisée: Intégration Auth <-> Users (register)
 

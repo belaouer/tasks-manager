@@ -78,6 +78,60 @@ describe('UsersController (integration)', () => {
     await request(app.getHttpServer()).get('/users/unknown-id').expect(404);
   });
 
+  it('updates user profile names', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/users')
+      .send({
+        email: 'users.update@example.com',
+        firstName: 'Before',
+        lastName: 'Update',
+      })
+      .expect(201);
+
+    const userId = createResponse.body.id as string;
+
+    const updateResponse = await request(app.getHttpServer())
+      .patch(`/users/${userId}`)
+      .send({
+        firstName: 'After',
+        lastName: 'Rename',
+      })
+      .expect(200);
+
+    expect(updateResponse.body.id).toBe(userId);
+    expect(updateResponse.body.firstName).toBe('After');
+    expect(updateResponse.body.lastName).toBe('Rename');
+  });
+
+  it('returns 404 when updating unknown user profile', async () => {
+    await request(app.getHttpServer())
+      .patch('/users/unknown-id')
+      .send({
+        firstName: 'After',
+        lastName: 'Rename',
+      })
+      .expect(404);
+  });
+
+  it('returns 400 for invalid update payload', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/users')
+      .send({
+        email: 'users.invalid-update@example.com',
+        firstName: 'Valid',
+        lastName: 'Profile',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/users/${createResponse.body.id as string}`)
+      .send({
+        firstName: 'A',
+        lastName: '',
+      })
+      .expect(400);
+  });
+
   it('returns 400 for invalid create payload', async () => {
     await request(app.getHttpServer())
       .post('/users')
