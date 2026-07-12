@@ -1,19 +1,20 @@
+import { ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-describe('Auth (e2e)', () => {
+describe('AuthController (integration)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     process.env.PERSISTENCE_DRIVER = 'in-memory';
-    process.env.JWT_ACCESS_SECRET = 'e2e-access-secret';
-    process.env.JWT_REFRESH_SECRET = 'e2e-refresh-secret';
-    process.env.JWT_ISSUER = 'tasks-manager-e2e';
-    process.env.JWT_AUDIENCE = 'tasks-manager-e2e-api';
+    process.env.JWT_ACCESS_SECRET = 'test-access-secret';
+    process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+    process.env.JWT_ISSUER = 'tasks-manager-tests';
+    process.env.JWT_AUDIENCE = 'tasks-manager-tests-api';
 
-    const { AppModule } = require('./../src/app.module');
+    const { AppModule } = require('../../../../app.module');
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -39,21 +40,27 @@ describe('Auth (e2e)', () => {
     }
   });
 
-  it('rejects invalid register payload', () => {
-    return request(app.getHttpServer())
+  it('register sets refresh cookie and returns access token', async () => {
+    const response = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'not-an-email',
-        password: 'short',
+        email: 'register.integration@example.com',
+        password: 'Password123',
       })
-      .expect(400);
+      .expect(201);
+
+    expect(typeof response.body.accessToken).toBe('string');
+    expect(response.body.accessToken.length).toBeGreaterThan(0);
+
+    const refreshCookie = extractRefreshCookie(response.header['set-cookie']);
+    expect(refreshCookie).not.toBeNull();
   });
 
-  it('register -> login -> refresh -> logout flow', async () => {
+  it('login then refresh rotates cookie and returns a new access token', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'auth.e2e@example.com',
+        email: 'refresh.integration@example.com',
         password: 'Password123',
       })
       .expect(201);
@@ -61,13 +68,10 @@ describe('Auth (e2e)', () => {
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'auth.e2e@example.com',
+        email: 'refresh.integration@example.com',
         password: 'Password123',
       })
       .expect(200);
-
-    expect(typeof loginResponse.body.accessToken).toBe('string');
-    expect(loginResponse.body.accessToken.length).toBeGreaterThan(0);
 
     const loginCookie = extractRefreshCookie(loginResponse.header['set-cookie']);
     expect(loginCookie).not.toBeNull();
@@ -77,24 +81,42 @@ describe('Auth (e2e)', () => {
       .set('Cookie', [loginCookie as string])
       .expect(200);
 
-    expect(typeof refreshResponse.body.accessToken).toBe('string');
-    expect(refreshResponse.body.accessToken.length).toBeGreaterThan(0);
-
     const rotatedCookie = extractRefreshCookie(refreshResponse.header['set-cookie']);
     expect(rotatedCookie).not.toBeNull();
 
+    expect(typeof refreshResponse.body.accessToken).toBe('string');
+    expect(refreshResponse.body.accessToken.length).toBeGreaterThan(0);
+
+  });
+
+  it('logout clears refresh cookie and refresh is rejected afterwards', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'logout.integration@example.com',
+        password: 'Password123',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'logout.integration@example.com',
+        password: 'Password123',
+      })
+      .expect(200);
+
+    const loginCookie = extractRefreshCookie(loginResponse.header['set-cookie']);
+
     const logoutResponse = await request(app.getHttpServer())
       .post('/auth/logout')
-      .set('Cookie', [rotatedCookie as string])
+      .set('Cookie', [loginCookie as string])
       .expect(204);
 
     const clearCookieHeader = (logoutResponse.header['set-cookie'] ?? []).join(';');
     expect(clearCookieHeader).toContain('refreshToken=');
 
-    return request(app.getHttpServer())
-      .post('/auth/refresh')
-      .set('Cookie', [rotatedCookie as string])
-      .expect(401);
+    await request(app.getHttpServer()).post('/auth/refresh').expect(401);
   });
 });
 

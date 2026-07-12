@@ -1,98 +1,325 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend - Tasks Manager (NestJS)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Ce backend est conçu comme une démonstration professionnelle de DDD + Architecture Hexagonale (Ports & Adapters), avec un découpage orienté domaines.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Etat actuel du développement: phase 1 centrée uniquement sur Authentification.
 
-## Description
+Avancement actuel: Auth Domain + Application + Infrastructure + Presentation HTTP + tests unitaires + tests d'intégration + tests E2E.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Objectifs architecturaux
 
-## Project setup
+- Séparer strictement Domain, Application, Infrastructure et Presentation.
+- Garder le domaine pur (aucune dépendance NestJS, ORM, framework externe).
+- Faire dépendre les use cases uniquement de ports abstraits.
+- Permettre l'échange d'adapters techniques sans modifier la logique métier.
+- Positionner tous les domaines sous `src/domains`.
+- Positionner les éléments non-domaines directement sous `src`.
 
-```bash
-$ npm install
+## Arborescence cible (phase Auth)
+
+```text
+src/
+  domains/
+    auth/
+      domain/
+        entities/
+        value-objects/
+        services/
+        ports/
+        exceptions/
+        factories/
+      application/
+        use-cases/
+        dto/
+        services/
+      infrastructure/
+        persistence/
+          common/
+          typeorm/
+          prisma/
+        security/
+        jwt/
+        services/
+      presentation/
+        controllers/
+        dto/
+        guards/
+        filters/
+        mappers/
+  shared/
+    domain/
+      services/
+    application/
+      services/
+    infrastructure/
+      services/
 ```
 
-## Compile and run the project
+## Pourquoi ce découpage
+
+- `domain`: coeur métier, invariants, règles, erreurs métier, contrats (ports).
+- `application`: orchestration des cas d'usage (login, register, refresh, logout), sans dépendance aux implémentations.
+- `infrastructure`: implémentations concrètes (JWT, bcrypt, persistence, horloge, etc.).
+- `presentation`: HTTP, DTO d'entrée/sortie, guards et mapping des erreurs.
+
+Ce découpage réduit le couplage, améliore la testabilité et prépare l'évolution vers plusieurs adapters de persistence.
+
+## Ports sous forme de classes abstraites
+
+Tous les ports sont prévus comme classes abstraites (et non interfaces TypeScript) pour trois raisons:
+
+- NestJS a besoin d'un token d'injection présent au runtime.
+- Une interface TypeScript est effacée à la compilation.
+- Une classe abstraite offre un contrat explicite, injectable, testable et stable.
+
+## Dynamic Module de persistence (prévu)
+
+L'objectif est d'introduire un module dynamique de persistence pour sélectionner l'adapter au démarrage (TypeORM ou Prisma) sans impact sur:
+
+- les use cases
+- le domaine
+- les contrôleurs
+
+Cela matérialise le bénéfice principal de l'architecture hexagonale: inverser la dépendance vers les ports et rendre l'infrastructure interchangeable.
+
+## Dépendances installées pour la phase Auth
+
+Uniquement les dépendances nécessaires à l'authentification ont été ajoutées.
+
+Runtime:
+
+- `@nestjs/jwt`
+- `@nestjs/passport`
+- `@nestjs/config`
+- `joi`
+- `@nestjs/swagger`
+- `swagger-ui-express`
+- `passport`
+- `passport-jwt`
+- `passport-local`
+- `bcrypt`
+- `class-validator`
+- `class-transformer`
+- `cookie-parser`
+
+Type definitions (dev):
+
+- `@types/passport-jwt`
+- `@types/passport-local`
+- `@types/bcrypt`
+- `@types/cookie-parser`
+
+Non installé volontairement à ce stade:
+
+- WebSocket / Socket.io
+
+## Plan d'implémentation (prochaine étape)
+
+1. Préparer la transition vers le prochain domaine (Users) sans modifier Auth existant.
+
+## Etape réalisée: Validation stricte des variables d'environnement
+
+Eléments implémentés:
+
+- Ajout de `ConfigModule` global avec schéma de validation Joi.
+- Validation forte de `NODE_ENV`, `PORT`, `PERSISTENCE_DRIVER`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`.
+- Validation conditionnelle de `DATABASE_URL` (obligatoire en `typeorm`/`prisma`).
+- Suppression des fallbacks JWT implicites dans les adapters de signature et de vérification.
+- Mise à jour de `.env.example` avec contraintes explicites sur les secrets.
+
+Décisions clés:
+
+- L'application échoue au démarrage si une variable critique est absente ou invalide (fail fast).
+- Les secrets JWT ne disposent plus de valeur par défaut, évitant les démarrages non sûrs.
+- La règle conditionnelle `DATABASE_URL` réduit les erreurs de config selon le driver choisi.
+
+## Etape réalisée: Revue sécurité finale Auth
+
+Durcissements implémentés:
+
+- Ajout de `helmet` pour renforcer les headers HTTP de sécurité.
+- Désactivation de `x-powered-by` pour réduire la divulgation d'information technique.
+- Exposition Swagger contrôlée par variable `SWAGGER_ENABLED` (désactivable en production).
+- Renforcement JWT: ajout/validation stricte de `issuer` et `audience`.
+- Vérification du refresh token limitée à l'algorithme attendu (`HS256`).
+
+Variables d'environnement de sécurité ajoutées:
+
+- `JWT_ISSUER`
+- `JWT_AUDIENCE`
+- `SWAGGER_ENABLED`
+
+Décisions clés:
+
+- Les frontières de confiance des tokens sont explicites (secret + issuer + audience + algorithme).
+- La documentation API n'est plus exposée implicitement, ce qui réduit la surface d'attaque en production.
+- Les headers de sécurité sont appliqués globalement sans impacter l'architecture hexagonale.
+
+## Etape réalisée: Socle Auth Domain + Application
+
+Eléments implémentés:
+
+- Value Objects: Email, Password, UserId.
+- Entity: AuthUser (construction, rehydratation, rotation refresh token).
+- Ports abstraits: UserRepositoryPort, PasswordHasherPort, TokenIssuerPort, ClockPort, IdGeneratorPort.
+- Exceptions Domain et Application dédiées.
+- Use Cases injectables: RegisterUseCase, LoginUseCase.
+
+Décisions clés:
+
+- Les règles de format email et robustesse de mot de passe sont dans le domaine pour garantir les invariants partout.
+- Les use cases dépendent uniquement des ports abstraits et ne connaissent aucune implémentation technique.
+- Le hash du refresh token est prévu dès les use cases pour éviter tout stockage en clair.
+
+## Etape réalisée: Branchement Infrastructure initial Auth
+
+Eléments implémentés:
+
+- Adapter hash: bcrypt.
+- Adapter émission tokens: JWT (access 15m, refresh 7d).
+- Adapter horloge: system clock.
+- Adapter génération d'identifiants: UUID.
+- Adapter repository temporaire: in-memory.
+- Module Auth Nest pour relier les ports abstraits vers les adapters.
+
+Décisions clés:
+
+- Le repository in-memory est volontairement transitoire pour permettre d'avancer sans ORM à ce stade.
+- Les use cases restent inchangés: seul le wiring DI a été ajouté.
+- Les secrets JWT sont lus via variables d'environnement validées strictement au démarrage.
+
+## Etape réalisée: Presentation Auth + Cookies HttpOnly
+
+Eléments implémentés:
+
+- Controller HTTP Auth: register, login, refresh, logout.
+- DTO d'entrée avec class-validator.
+- ValidationPipe globale (whitelist, transform, forbid unknown/non-whitelisted).
+- cookie-parser au bootstrap.
+- Ecriture/rotation/clear du refresh token en cookie HttpOnly.
+- Exception filter dédié Auth pour mapper les erreurs métier/applicatives en réponses HTTP cohérentes.
+
+Décisions clés:
+
+- Le refresh token n'est jamais renvoyé dans le body HTTP, uniquement en cookie HttpOnly.
+- La rotation du refresh token est appliquée à chaque refresh.
+- Le logout invalide le refresh token stocké et nettoie le cookie.
+
+## Etape réalisée: Tests unitaires Auth
+
+Fichiers de tests ajoutés:
+
+- `login.use-case.spec.ts`
+- `refresh-token.use-case.spec.ts`
+
+Scénarios couverts:
+
+- Login invalide (utilisateur inexistant).
+- Login valide avec rotation du hash refresh token.
+- Refresh invalide (token non vérifiable).
+- Refresh valide avec rotation du hash refresh token.
+
+Résultat d'exécution:
+
+- 2 suites OK
+- 4 tests OK
+
+Pourquoi cette priorité:
+
+- `LoginUseCase` et `RefreshTokenUseCase` concentrent les risques de sécurité les plus élevés.
+- Ces tests valident le contrat des ports abstraits et l'absence de dépendance aux adapters concrets.
+
+## Etape réalisée: Dynamic Module de persistence
+
+Eléments implémentés:
+
+- `PersistenceModule.register({ driver })` pour choisir l'adapter repository au démarrage.
+- Drivers supportés: `in-memory`, `typeorm`, `prisma`.
+- Résolution du driver via variable d'environnement `PERSISTENCE_DRIVER`.
+- Trois adapters repository distincts, chacun branché via le même port `UserRepositoryPort`.
+
+Décisions clés:
+
+- Les adapters `TypeOrmUserRepositoryAdapter` et `PrismaUserRepositoryAdapter` sont déjà branchables par DI.
+- Leur implémentation de stockage est transitoire pour cette étape et repose sur un store partagé en mémoire.
+- Les use cases n'ont pas été modifiés: seule la composition root a évolué.
+
+## Etape réalisée: Adapters ORM réels (Prisma + TypeORM)
+
+Eléments implémentés:
+
+- Schema Prisma pour `auth_users`.
+- Service Prisma (`PrismaClient`) et adapter repository Prisma.
+- Entité TypeORM `auth_users`, service `DataSource` et adapter repository TypeORM.
+- Mapper persistence <-> domaine commun aux adapters.
+- Fichier `.env.example` avec `PERSISTENCE_DRIVER`, `DATABASE_URL` et secrets JWT.
+
+Configuration de driver:
+
+- `PERSISTENCE_DRIVER=in-memory` (par défaut)
+- `PERSISTENCE_DRIVER=prisma`
+- `PERSISTENCE_DRIVER=typeorm`
+
+Décisions clés:
+
+- Les adapters ORM sont branchés derrière le même `UserRepositoryPort`.
+- Le domaine et les use cases n'ont subi aucun changement pour passer de in-memory à ORM.
+- Prisma Client est généré via `npx prisma generate`.
+
+## Etape réalisée: Tests E2E Auth
+
+Fichier de tests ajouté/mis à jour:
+
+- `test/app.e2e-spec.ts`
+
+Scénarios couverts:
+
+- Rejet d'un payload invalide au register (validation globale).
+- Flux complet Auth: register -> login -> refresh (rotation cookie) -> logout -> refresh rejeté.
+
+Résultat d'exécution:
+
+- 1 suite E2E OK
+- 2 tests E2E OK
+
+Décisions clés:
+
+- Les tests E2E ciblent les contrats HTTP réels (status, body, cookies), pas les détails internes.
+- Le driver de persistence est forcé en `in-memory` pour obtenir des tests rapides et déterministes.
+- Le test de logout confirme l'invalidation serveur (refresh rejeté après logout) en plus du clear cookie côté client.
+
+## Etape réalisée: Documentation Swagger Auth
+
+Eléments implémentés:
+
+- Intégration OpenAPI dans le bootstrap NestJS.
+- Exposition de l'UI Swagger sur `/docs`.
+- Documentation des endpoints Auth (`register`, `login`, `refresh`, `logout`).
+- Documentation des schémas DTO et des réponses HTTP.
+- Déclaration des mécanismes de sécurité: Bearer token (access token) et cookie `refreshToken`.
+
+Dépendances ajoutées:
+
+- `@nestjs/swagger`
+- `swagger-ui-express`
+
+Décisions clés:
+
+- Swagger est limité au périmètre Auth de cette phase pour garder une documentation cohérente et focalisée.
+- Les contrats HTTP documentés correspondent aux comportements réellement testés en intégration/E2E.
+- Le cookie refresh est explicitement documenté pour clarifier le flux de sécurité côté client.
+
+## Commandes utiles
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
+npm run start:dev
+npm run test
 ```
 
-## Run tests
+## Ce qui viendra plus tard
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- Implémentation complète Users, Lists, Tasks.
+- WebSocket temps réel avec rooms par liste.
+- Dockerfiles + docker-compose.
+- Pipeline CI (lint + tests).
