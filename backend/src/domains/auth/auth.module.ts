@@ -8,18 +8,22 @@ import { ClockPort } from './domain/ports/clock.port';
 import { IdGeneratorPort } from './domain/ports/id-generator.port';
 import { PasswordHasherPort } from './domain/ports/password-hasher.port';
 import { TokenIssuerPort } from './domain/ports/token-issuer.port';
+import { UserProfileProvisioningPort } from './domain/ports/user-profile-provisioning.port';
 import { TokenVerifierPort } from './domain/ports/token-verifier.port';
 import { JwtTokenIssuerAdapter } from './infrastructure/jwt/jwt-token-issuer.adapter';
 import { JwtTokenVerifierAdapter } from './infrastructure/jwt/jwt-token-verifier.adapter';
+import { UsersModule } from '../users/users.module';
 import { PersistenceModule } from './infrastructure/persistence/persistence.module';
 import { resolvePersistenceDriver } from './infrastructure/persistence/persistence-driver.type';
 import { BcryptPasswordHasherAdapter } from './infrastructure/security/bcrypt-password-hasher.adapter';
 import { SystemClockAdapter } from './infrastructure/services/system-clock.adapter';
+import { UsersProfileProvisioningAdapter } from './infrastructure/services/users-profile-provisioning.adapter';
 import { UuidIdGeneratorAdapter } from './infrastructure/services/uuid-id-generator.adapter';
 import { AuthController } from './presentation/controllers/auth.controller';
 
 @Module({
   imports: [
+    UsersModule,
     JwtModule.register({}),
     PersistenceModule.register({
       driver: resolvePersistenceDriver(process.env.PERSISTENCE_DRIVER),
@@ -38,6 +42,10 @@ import { AuthController } from './presentation/controllers/auth.controller';
     {
       provide: TokenIssuerPort,
       useClass: JwtTokenIssuerAdapter,
+    },
+    {
+      provide: UserProfileProvisioningPort,
+      useClass: UsersProfileProvisioningAdapter,
     },
     {
       provide: TokenVerifierPort,

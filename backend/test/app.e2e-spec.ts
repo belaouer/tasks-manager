@@ -45,6 +45,8 @@ describe('Auth (e2e)', () => {
       .send({
         email: 'not-an-email',
         password: 'short',
+        firstName: 'A',
+        lastName: '',
       })
       .expect(400);
   });
@@ -55,6 +57,8 @@ describe('Auth (e2e)', () => {
       .send({
         email: 'auth.e2e@example.com',
         password: 'Password123',
+        firstName: 'Auth',
+        lastName: 'E2E',
       })
       .expect(201);
 

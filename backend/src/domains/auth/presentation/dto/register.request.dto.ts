@@ -10,4 +10,14 @@ export class RegisterRequestDto {
   @IsString()
   @MinLength(8)
   readonly password!: string;
+
+  @ApiProperty({ example: 'John', minLength: 2 })
+  @IsString()
+  @MinLength(2)
+  readonly firstName!: string;
+
+  @ApiProperty({ example: 'Doe', minLength: 2 })
+  @IsString()
+  @MinLength(2)
+  readonly lastName!: string;
 }

@@ -56,7 +56,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AccessTokenResponseDto> {
     const result = await this.registerUseCase.execute(
-      new RegisterCommand(body.email, body.password),
+      new RegisterCommand(body.email, body.password, body.firstName, body.lastName),
     );
 
     this.writeRefreshCookie(response, result.refreshToken);

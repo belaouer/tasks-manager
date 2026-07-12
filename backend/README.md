@@ -115,7 +115,29 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Intégrer le flux Auth <-> Users (création du profil Users lors de l'inscription Auth).
+1. Ajouter les endpoints de mise à jour profil Users (rename) et leurs tests.
+
+## Etape réalisée: Intégration Auth <-> Users (register)
+
+Eléments implémentés:
+
+- Ajout d'un port Auth dédié `UserProfileProvisioningPort` pour orchestrer la création du profil Users.
+- Adapter d'infrastructure Auth vers Users (`UsersProfileProvisioningAdapter`) branché via DI.
+- Le `RegisterUseCase` Auth provisionne désormais le profil Users pendant l'inscription.
+- Enrichissement du payload `POST /auth/register` avec `firstName` et `lastName`.
+- Validation et Swagger alignés sur le nouveau contrat d'inscription.
+- Mapping d'erreurs dédié côté Auth (`InvalidUserProfileApplicationException`).
+
+Tests alignés:
+
+- Tests d'intégration Auth mis à jour pour le nouveau payload register.
+- Test E2E Auth mis à jour pour couvrir le nouveau contrat.
+
+Décisions clés:
+
+- L'intégration inter-domaines passe par un port abstrait côté Auth pour préserver l'architecture hexagonale.
+- Auth ne dépend pas des détails techniques Users: seul l'adapter connaît le use case concret.
+- Le contrat register est aligné avec le besoin fonctionnel (création immédiate du profil utilisateur).
 
 ## Etape réalisée: Presentation Users + tests d'intégration
 
