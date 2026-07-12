@@ -4,7 +4,7 @@ Ce backend est conçu comme une démonstration professionnelle de DDD + Architec
 
 Etat actuel du développement: phase 1 centrée uniquement sur Authentification.
 
-Avancement actuel: Auth Domain + Application + Infrastructure + Presentation HTTP + tests unitaires + tests d'intégration + tests E2E.
+Avancement actuel: Auth complet + Users (socle Domain + Application).
 
 ## Objectifs architecturaux
 
@@ -115,7 +115,30 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter le socle métier Users (Domain + Application) sans infrastructure persistante finale.
+1. Implémenter l'infrastructure Users (adapters persistence in-memory/typeorm/prisma) sans endpoint HTTP.
+
+## Etape réalisée: Socle métier Users (Domain + Application)
+
+Eléments implémentés:
+
+- Domaine Users:
+  - Entité `User` (création, rehydratation, mise à jour du nom).
+  - Value Objects `UserId`, `UserEmail`, `FirstName`, `LastName`.
+  - Exception domaine dédiée pour validation des noms.
+  - Ports abstraits: `UsersRepositoryPort`, `UsersClockPort`, `UsersIdGeneratorPort`.
+- Application Users:
+  - Use cases `CreateUserUseCase` et `GetUserProfileUseCase`.
+  - Commands/DTOs dédiés (`CreateUserCommand`, `GetUserProfileCommand`, `UserProfileDto`).
+  - Exceptions applicatives (`UserAlreadyExistsApplicationException`, `UserNotFoundApplicationException`).
+- Tests unitaires Users:
+  - `create-user.use-case.spec.ts`
+  - `get-user-profile.use-case.spec.ts`
+
+Décisions clés:
+
+- Le périmètre reste strictement Domain + Application: aucune dépendance ORM/HTTP ajoutée à cette étape.
+- Les use cases dépendent uniquement de ports abstraits, pour préparer des adapters interchangeables ensuite.
+- Le modèle Users est découplé d'Auth pour conserver des bounded contexts clairs.
 
 ## Etape réalisée: Transition vers le domaine Users
 
