@@ -1,10 +1,27 @@
 # Backend - Tasks Manager (NestJS)
 
+[![backend-ci](https://github.com/belaouer/tasks-manager/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/belaouer/tasks-manager/actions/workflows/backend-ci.yml)
+
 Ce backend est conçu comme une démonstration professionnelle de DDD + Architecture Hexagonale (Ports & Adapters), avec un découpage orienté domaines.
 
-Etat actuel du développement: phase 1 centrée uniquement sur Authentification.
+Etat actuel du développement: backend complet sur les domaines Auth, Users, Lists et Tasks.
 
-Avancement actuel: Auth complet + Users (socle Domain + Application).
+Avancement actuel:
+
+- Authentification JWT complète (access/refresh, cookie httpOnly, rotation, hardening).
+- Domaine Users complet (domain/application/infrastructure/presentation + tests).
+- Domaine Lists complet (domain/application/infrastructure/presentation + tests).
+- Domaine Tasks complet (domain/application/infrastructure/presentation + tests).
+- Temps réel WebSocket Socket.IO pour Tasks (gateway JWT, rooms par liste, événements).
+- Tests unitaires, intégration et e2e inter-domaines en place.
+- Docker backend multi-stage + docker-compose backend/postgresql.
+- CI GitHub Actions backend (`lint` + `test` + `build`).
+
+## Lancement rapide (3 commandes)
+
+1. `git clone https://github.com/belaouer/tasks-manager.git`
+2. `cp backend/.env.example backend/.env` (ou copier le fichier manuellement sous Windows)
+3. `docker compose up --build`
 
 ## Objectifs architecturaux
 
@@ -15,7 +32,7 @@ Avancement actuel: Auth complet + Users (socle Domain + Application).
 - Positionner tous les domaines sous `src/domains`.
 - Positionner les éléments non-domaines directement sous `src`.
 
-## Arborescence cible (phase Auth)
+## Arborescence backend
 
 ```text
 src/
@@ -115,7 +132,7 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la finalisation de la branche Docker backend (revue finale + merge vers main).
+1. Finaliser la passe documentaire backend (cleanup des sections historiques et synthèse finale orientée livrable).
 
 ## Etape réalisée: Docker Compose backend + PostgreSQL
 
