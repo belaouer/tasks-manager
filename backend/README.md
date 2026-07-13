@@ -115,7 +115,33 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter le socle métier Tasks (Domain + Application) avec tests unitaires des use cases.
+1. Implémenter l'infrastructure Tasks (adapters persistence in-memory/typeorm/prisma + services) sans endpoint HTTP.
+
+## Etape réalisée: Socle métier Tasks (Domain + Application)
+
+Eléments implémentés:
+
+- Domaine Tasks:
+  - Entité `Task` (création, rehydratation, completion, réouverture).
+  - Value Objects `TaskId`, `TaskListId`, `TaskOwnerUserId`, `TaskShortDescription`, `TaskLongDescription`, `TaskDueDate`.
+  - Exceptions domaine dédiées (id/list/owner/description/date invalides).
+  - Ports abstraits: `TasksRepositoryPort`, `TasksClockPort`, `TasksIdGeneratorPort`.
+- Application Tasks:
+  - Use cases `CreateTaskUseCase`, `GetListTasksUseCase`, `CompleteTaskUseCase`, `ReopenTaskUseCase`, `DeleteTaskUseCase`.
+  - Commands/DTOs dédiés (`CreateTaskCommand`, `GetListTasksCommand`, `CompleteTaskCommand`, `ReopenTaskCommand`, `DeleteTaskCommand`, `TaskSummaryDto`).
+  - Exceptions applicatives (`TaskNotFoundApplicationException`, `TaskAccessDeniedApplicationException`).
+- Tests unitaires Tasks:
+  - `create-task.use-case.spec.ts`
+  - `get-list-tasks.use-case.spec.ts`
+  - `complete-task.use-case.spec.ts`
+  - `reopen-task.use-case.spec.ts`
+  - `delete-task.use-case.spec.ts`
+
+Décisions clés:
+
+- Le périmètre reste strictement Domain + Application: aucune dépendance ORM/HTTP ajoutée à cette étape.
+- L'isolation des données est portée dès l'application via le couple `ownerUserId` + `listId` dans les use cases critiques.
+- Les règles d'état d'une tâche (terminée/non terminée) sont encapsulées dans l'entité pour préserver les invariants métier.
 
 ## Etape réalisée: Transition vers le domaine Tasks
 
