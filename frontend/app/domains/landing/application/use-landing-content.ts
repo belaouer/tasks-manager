@@ -13,11 +13,6 @@ const LANDING_CONTENT: LandingContent = {
       title: 'UI responsive',
       description:
         'Interface lisible desktop/mobile avec typographie et contrastes intentionnels.'
-    },
-    {
-      title: 'Prochaine etape',
-      description:
-        "Mettre en place l'auth frontend: session, guards de route et ecrans login/register."
     }
   ]
 };
