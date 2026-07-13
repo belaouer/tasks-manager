@@ -13,6 +13,9 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Module Auth frontend en place (register/login/logout/refresh).
 - Dashboard protege par middleware d'authentification.
 - Module Lists frontend en place (lecture/creation/suppression).
+- Module Tasks frontend en place (lecture/creation/completion/reouverture/suppression).
+- Strategie de tests frontend en place: unitaires, integration.
+- E2E Playwright prepare et planifie pour une etape dediee.
 
 ## Arborescence active
 
@@ -38,6 +41,10 @@ app/
 			domain/
 			application/
 			infrastructure/
+		tasks/
+			domain/
+			application/
+			infrastructure/
 	layouts/
 		default.vue
 	pages/
@@ -50,7 +57,13 @@ middleware/
 	authenticated.ts
 plugins/
 	auth-bootstrap.client.ts
+tests/
+	unit/
+	integration/
+	e2e/
 tailwind.config.ts
+vitest.config.ts
+playwright.config.ts
 ```
 
 Regle DDD frontend appliquee:
@@ -83,14 +96,28 @@ npm run build
 npm run preview
 ```
 
+## Tests
+
+```bash
+npm run test:unit
+npm run test:integration
+npm run test:e2e
+```
+
+Niveaux couverts:
+
+- Unitaire: helpers du domaine.
+- Integration: use cases/composables avec adapters mockes.
+- E2E: configuration et scenario Playwright prepares, execution differree.
+
 ## Prochaine etape
 
-Brancher le module Tasks frontend:
+Integrer le temps reel Tasks via WebSocket:
 
-- lecture des taches par liste,
-- creation/completion/reouverture/suppression,
-- integration temps reel via WebSocket,
-- UX dashboard orientee workflow.
+- connexion socket authentifiee,
+- souscription rooms par liste,
+- mise a jour UI sur evenements `task:*`,
+- tests de non-regression associes.
 
 ## Dependance ajoutee a cette etape
 
@@ -112,3 +139,13 @@ Le refresh token reste gere en cookie `HttpOnly` cote backend. Le frontend conse
 - `DELETE /lists/:listId`
 
 Tous les appels Lists utilisent `Authorization: Bearer <accessToken>`.
+
+## Contrat backend Tasks utilise
+
+- `GET /lists/:listId/tasks`
+- `POST /lists/:listId/tasks`
+- `PATCH /lists/:listId/tasks/:taskId/complete`
+- `PATCH /lists/:listId/tasks/:taskId/reopen`
+- `DELETE /lists/:listId/tasks/:taskId`
+
+Tous les appels Tasks utilisent `Authorization: Bearer <accessToken>`.

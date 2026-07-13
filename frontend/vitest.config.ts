@@ -1,0 +1,16 @@
+import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '~': fileURLToPath(new URL('./app', import.meta.url)),
+      '@': fileURLToPath(new URL('./app', import.meta.url))
+    }
+  },
+  test: {
+    environment: 'node',
+    globals: true,
+    setupFiles: ['./tests/setup/nuxt-globals.ts']
+  }
+});
