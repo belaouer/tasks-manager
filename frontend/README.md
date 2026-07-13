@@ -8,7 +8,8 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Socle Nuxt 4 operationnel.
 - Layout global en place.
 - Page d'accueil de fondation frontend.
-- Styles globaux avec variables CSS, animations legeres et responsive mobile/desktop.
+- Tailwind CSS active avec UI dark mode par defaut.
+- Toggle de theme sombre/clair avec persistence locale.
 
 ## Arborescence active
 
@@ -22,10 +23,15 @@ app/
 		landing/
 			domain/
 			application/
+		theme/
+			domain/
+			application/
+			infrastructure/
 	layouts/
 		default.vue
 	pages/
 		index.vue
+tailwind.config.ts
 ```
 
 Regle DDD frontend appliquee:
@@ -38,8 +44,9 @@ Regle DDD frontend appliquee:
 
 - Nuxt 4 + Vue 3 pour SSR/SPA moderne et conventions de structure robustes.
 - Layout centralise pour stabiliser la shell applicative avant ajout des ecrans metier.
-- Variables CSS pour un theme coherent et evolutif.
-- Animations d'entree discretes pour donner de la lisibilite sans surcharger l'UX.
+- Tailwind CSS pour accelerer une UI coherente, maintenable et responsive.
+- Theme sombre par defaut + mode clair via un domaine `theme` dedie.
+- Persistance du choix de theme via adapter infrastructure navigateur (`localStorage`).
 
 ## Lancer le frontend
 
@@ -65,3 +72,7 @@ Implementer le module Auth frontend:
 - client API auth,
 - gestion session/cookies,
 - guards de navigation.
+
+## Dependance ajoutee a cette etape
+
+- `@nuxtjs/tailwindcss` (module Nuxt d'integration Tailwind).
