@@ -180,4 +180,13 @@ test('auth + lists + tasks flow', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Completer' }).first().click();
   await expect(page.getByText('Terminee').first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Supprimer la tache' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Confirmer la suppression' })).toBeVisible();
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect(page.getByRole('heading', { name: 'Tester le flow e2e' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Supprimer la tache' }).first().click();
+  await page.getByRole('button', { name: 'Confirmer la suppression' }).click();
+  await expect(page.getByText('Tester le flow e2e')).toHaveCount(0);
 });
