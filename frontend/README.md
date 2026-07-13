@@ -138,6 +138,7 @@ npm run test:e2e
 Niveaux couverts:
 
 - Unitaire: helpers du domaine.
+- Unitaire auth: session applicative, adaptateur de stockage Nuxt et contrat de bootstrap/logout.
 - Integration: use cases/composables avec adapters mockes.
 - E2E: parcours dashboard auth + lists + tasks (Playwright).
 - E2E multi-onglets: verification de coherence des donnees entre clients.
