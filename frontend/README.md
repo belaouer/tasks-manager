@@ -17,6 +17,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Temps reel Tasks via WebSocket (Socket.IO) en place.
 - Hardening realtime: reconnect/resubscribe et statut socket visible en UI.
 - Observabilite realtime: metriques de reconnexion + horodatages de sante socket.
+- Fondations offline-first UX: statut reseau frontend + garde-fous sur ecritures hors ligne.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
@@ -44,6 +45,10 @@ app/
 			application/
 			infrastructure/
 		tasks/
+			domain/
+			application/
+			infrastructure/
+		connectivity/
 			domain/
 			application/
 			infrastructure/
@@ -113,12 +118,12 @@ Niveaux couverts:
 - E2E: parcours dashboard auth + lists + tasks (Playwright).
 - E2E multi-onglets: verification de coherence des donnees entre clients.
 - Integration realtime: verification des metriques d'observabilite.
+- Integration offline: verification des blocages metier lists/tasks hors ligne.
 
 ## Prochaine etape
 
 Prochaine evolution suggeree:
 
-- gestion offline-first,
 - retries metier sur conflits de synchro.
 
 ## Dependance ajoutee a cette etape

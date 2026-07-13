@@ -125,6 +125,47 @@ describe('useTasks integration', () => {
     expect(tasks.getTasksForList('list-1').value).toHaveLength(0);
   });
 
+  it('blocks tasks operations while offline', async () => {
+    const api = {
+      getListTasks: vi.fn(async () => []),
+      createTask: vi.fn(),
+      completeTask: vi.fn(),
+      reopenTask: vi.fn(),
+      deleteTask: vi.fn()
+    };
+
+    const tasks = useTasks({
+      getAccessToken: () => 'access-token',
+      isOnline: () => false,
+      tasksApi: api as any
+    });
+
+    await tasks.loadTasks('list-1');
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: impossible de charger les taches.');
+    expect(api.getListTasks).not.toHaveBeenCalled();
+
+    const created = await tasks.createTask('list-1', {
+      shortDescription: 'Offline task',
+      longDescription: null,
+      dueDate: '2026-07-26T12:00:00.000Z'
+    });
+    expect(created).toBe(false);
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: creation de tache indisponible.');
+    expect(api.createTask).not.toHaveBeenCalled();
+
+    await tasks.completeTask('list-1', 'task-1');
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: completion de tache indisponible.');
+    expect(api.completeTask).not.toHaveBeenCalled();
+
+    await tasks.reopenTask('list-1', 'task-1');
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: reouverture de tache indisponible.');
+    expect(api.reopenTask).not.toHaveBeenCalled();
+
+    await tasks.deleteTask('list-1', 'task-1');
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: suppression de tache indisponible.');
+    expect(api.deleteTask).not.toHaveBeenCalled();
+  });
+
   it('subscribes realtime and routes incoming events to handlers', () => {
     const onTaskUpsert = vi.fn();
     const onTaskDeleted = vi.fn();
