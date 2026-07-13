@@ -115,7 +115,30 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la finalisation de la branche temps réel (revue finale + merge vers main).
+1. Ajouter un `docker-compose.yml` backend + PostgreSQL et aligner `.env.example` pour un démarrage local conteneurisé en une commande.
+
+## Etape réalisée: Dockerisation du backend
+
+Eléments implémentés:
+
+- Ajout d'un `Dockerfile` backend multi-stage:
+  - stage `deps` (installation dépendances + `prisma generate`)
+  - stage `build` (compilation NestJS + prune des dépendances dev)
+  - stage `runtime` (image d'exécution minimale)
+- Ajout d'un `.dockerignore` backend pour réduire le contexte de build et accélérer la construction d'image.
+
+Décisions clés:
+
+- Le build multi-stage réduit la taille de l'image finale et isole les responsabilités build/runtime.
+- Le client Prisma est généré au build pour garantir la cohérence runtime.
+- Le runtime démarre uniquement `dist/main` avec `NODE_ENV=production`.
+
+Commandes Docker backend:
+
+- Build image:
+  - `docker build -t tasks-manager-backend ./backend`
+- Run conteneur:
+  - `docker run --rm -p 3000:3000 --env-file backend/.env.example tasks-manager-backend`
 
 ## Etape réalisée: Tests d'intégration WebSocket Tasks
 
