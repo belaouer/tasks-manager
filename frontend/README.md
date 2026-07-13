@@ -10,6 +10,8 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Page d'accueil de fondation frontend.
 - Tailwind CSS active avec UI dark mode par defaut.
 - Toggle de theme sombre/clair avec persistence locale.
+- Module Auth frontend en place (register/login/logout/refresh).
+- Dashboard protege par middleware d'authentification.
 
 ## Arborescence active
 
@@ -27,10 +29,22 @@ app/
 			domain/
 			application/
 			infrastructure/
+		auth/
+			domain/
+			application/
+			infrastructure/
 	layouts/
 		default.vue
 	pages/
 		index.vue
+		auth/
+			login.vue
+			register.vue
+		dashboard.vue
+middleware/
+	authenticated.ts
+plugins/
+	auth-bootstrap.client.ts
 tailwind.config.ts
 ```
 
@@ -66,13 +80,22 @@ npm run preview
 
 ## Prochaine etape
 
-Implementer le module Auth frontend:
+Brancher le module Lists frontend:
 
-- pages login/register,
-- client API auth,
-- gestion session/cookies,
-- guards de navigation.
+- lecture des listes,
+- creation/suppression,
+- integration token bearer,
+- ecran dashboard enrichi.
 
 ## Dependance ajoutee a cette etape
 
 - `@nuxtjs/tailwindcss` (module Nuxt d'integration Tailwind).
+
+## Contrat backend Auth utilise
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+
+Le refresh token reste gere en cookie `HttpOnly` cote backend. Le frontend conserve uniquement l'access token en etat applicatif.
