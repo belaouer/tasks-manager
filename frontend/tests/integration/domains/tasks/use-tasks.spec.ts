@@ -181,6 +181,17 @@ describe('useTasks integration', () => {
 
     lifecycleHandlers!.onConnected();
     expect(realtimeAdapter.joinList).toHaveBeenCalledWith('list-1');
+    expect(realtime.observability.value.lastConnectedAt).not.toBeNull();
+
+    lifecycleHandlers!.onReconnecting();
+    lifecycleHandlers!.onReconnecting();
+    expect(realtime.observability.value.reconnectAttempts).toBe(2);
+
+    lifecycleHandlers!.onDisconnected();
+    expect(realtime.observability.value.lastDisconnectedAt).not.toBeNull();
+
+    lifecycleHandlers!.onError();
+    expect(realtime.observability.value.lastErrorAt).not.toBeNull();
 
     registeredHandlers!.onTaskCreated(createTask({ id: 'created' }));
     registeredHandlers!.onTaskUpdated(createTask({ id: 'updated' }));
