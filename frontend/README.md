@@ -153,12 +153,6 @@ Niveaux couverts:
 - Integration sync conflicts: verification du retry metier sur erreur 409.
 - Integration write-behind: verification de la file offline et de la synchronisation differee.
 
-## Prochaine etape
-
-Prochaine evolution suggeree:
-
-- gestion explicite des conflits metier multi-utilisateurs.
-
 ## Audit Frontend vs Technical Test
 
 Statut global:
