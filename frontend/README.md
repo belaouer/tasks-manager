@@ -130,6 +130,46 @@ Prochaine evolution suggeree:
 
 - gestion explicite des conflits metier multi-utilisateurs.
 
+## Audit Frontend vs Technical Test
+
+Statut global:
+
+- Base frontend solide (auth, listes, taches, realtime, offline, retries) en place.
+- Plusieurs exigences fonctionnelles/UI du cahier sont encore a finaliser.
+
+### Deja couvert cote frontend
+
+- Authentification register/login + bootstrap session au chargement.
+- Route protegee via middleware Nuxt.
+- Flux listes/taches principal (creation, suppression, completion, reouverture).
+- Synchronisation temps reel Socket.IO sur les taches.
+- Tests unitaires/integration/e2e deja operationnels.
+
+### Restant a faire par priorite
+
+P0 - Critique (alignement direct cahier)
+
+1. Implementer Pinia comme store global officiel pour user/listes/taches (cahier explicite), puis brancher le realtime dessus sans re-fetch HTTP en reaction aux evenements socket.
+2. Refaire la page principale en 3 zones conformes:
+	left sidebar retractable, main content, right sidebar detail.
+3. Ajouter la right sidebar detail tache sur clic avec infos completes (description courte/longue, dates, statut) et action suppression.
+4. Ajouter les modales de confirmation obligatoires:
+	suppression liste (avec warning suppression cascade) et suppression tache.
+5. Ajouter la section "Mes taches terminees" dediee, repliee par defaut et depliable.
+
+P1 - Important (qualite produit / robustesse)
+
+1. Mettre en place un intercepteur HTTP Nuxt pour refresh transparent centralise et gestion uniforme des 401 (refresh puis redirection login si echec), au lieu d'une logique principalement au bootstrap.
+2. Finaliser le mode offline write-behind pour toutes les mutations (pas seulement creation), avec strategie de retry/exponential backoff et remontes d'etat utilisateur claires.
+3. Renforcer les tests e2e sur les exigences UI du cahier:
+	detail sidebar, section terminees, modales, cas token expire et redirection login.
+
+P2 - Livrable / industrialisation
+
+1. Ajouter le Dockerfile frontend (actuellement absent) et verifier l'integration docker-compose end-to-end.
+2. Completer la section README "avec plus de temps" sur priorites de tests et choix d'architecture frontend (Pinia, realtime, offline queue).
+3. Ajouter une check-list de conformite finale frontend pour valider chaque point du cahier avant livraison.
+
 ## Dependance ajoutee a cette etape
 
 - `@nuxtjs/tailwindcss` (module Nuxt d'integration Tailwind).
