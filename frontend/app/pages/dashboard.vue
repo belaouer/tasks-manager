@@ -70,6 +70,9 @@
           <div class="flex items-start justify-between gap-3">
             <div>
               <h2 class="text-base font-semibold">{{ list.name }}</h2>
+              <p v-if="list.pendingSync" class="mt-1 text-xs font-semibold" :class="isDarkMode ? 'text-amber-200' : 'text-amber-700'">
+                En attente de synchronisation
+              </p>
               <p class="mt-1 text-xs" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">
                 Creee le {{ formatDate(list.createdAt) }}
               </p>
@@ -476,7 +479,8 @@ const {
   errorMessage: listsError,
   loadLists,
   createList,
-  deleteList
+  deleteList,
+  flushPendingMutations: flushPendingListMutations
 } = useLists();
 const {
   isLoading: tasksLoading,
@@ -796,6 +800,7 @@ async function handleDeleteTask(taskId: string): Promise<void> {
 onMounted(async () => {
   startNetworkTracking();
   await loadLists();
+  await flushPendingListMutations();
   await flushPendingMutations();
 
   if (lists.value.length > 0) {
@@ -807,6 +812,7 @@ watch(
   () => isOnline.value,
   async (online) => {
     if (online) {
+      await flushPendingListMutations();
       await flushPendingMutations();
     }
   }

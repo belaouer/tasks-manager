@@ -21,6 +21,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Fondations offline-first UX: statut reseau frontend + garde-fous sur ecritures hors ligne.
 - Retries metier sur conflits de synchronisation pour les mutations Tasks.
 - File locale write-behind pour les mutations Tasks hors ligne (creation, completion, reouverture, suppression) + flush auto au retour reseau.
+- File locale write-behind pour les mutations Lists hors ligne (creation, suppression) + flush auto au retour reseau.
 - Dashboard restructure en 3 zones (left/main/right) avec left sidebar retractable.
 - Right sidebar detail de tache activee sur selection d'une tache.
 - Modales de confirmation de suppression (liste et tache) implementees.
@@ -167,7 +168,8 @@ P1 - Important (qualite produit / robustesse)
 1. Mettre en place un intercepteur HTTP Nuxt pour refresh transparent centralise et gestion uniforme des 401 (refresh puis redirection login si echec), au lieu d'une logique principalement au bootstrap: fait.
 2. Finaliser le mode offline write-behind pour toutes les mutations (pas seulement creation), avec strategie de retry/exponential backoff et remontes d'etat utilisateur claires.
 	- couverture Tasks hors ligne: faite.
-	- couverture Lists hors ligne: encore a traiter.
+	- couverture Lists hors ligne: faite.
+	- reste a industrialiser: retry/exponential backoff + messages d'etat plus riches.
 3. Renforcer les tests e2e sur les exigences UI du cahier:
 	detail sidebar, section terminees, modales, cas token expire et redirection login.
 

@@ -2,7 +2,12 @@ import { computed } from 'vue';
 import { useAuthSession } from '~/domains/auth/application/use-auth-session';
 import type { ListSummary } from '../domain/list-summary';
 import { HttpListsApiAdapter } from '../infrastructure/http-lists-api.adapter';
-import { useListsStore } from '../infrastructure/lists.store';
+import {
+  type PendingListCreateOperation,
+  type PendingListDeleteOperation,
+  type PendingListMutationOperation,
+  useListsStore
+} from '../infrastructure/lists.store';
 
 const listsApi = new HttpListsApiAdapter();
 
@@ -23,6 +28,130 @@ export function useLists(deps: UseListsDependencies = {}) {
 
   function resetError(): void {
     store.errorMessage = '';
+  }
+
+  function createPendingList(name: string, createdAt: string, tempListId: string): ListSummary {
+    return {
+      id: tempListId,
+      ownerUserId: 'pending-offline',
+      name,
+      createdAt,
+      updatedAt: createdAt,
+      pendingSync: true
+    };
+  }
+
+  function enqueuePendingCreate(name: string): ListSummary {
+    const normalizedName = name.trim();
+    const createdAt = new Date().toISOString();
+    const tempListId = `pending-list-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+    const operation: PendingListCreateOperation = {
+      operationId: `op-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+      kind: 'create',
+      tempListId,
+      payload: { name: normalizedName },
+      createdAt
+    };
+
+    store.pendingMutationQueue = [...store.pendingMutationQueue, operation];
+    return createPendingList(normalizedName, createdAt, tempListId);
+  }
+
+  function enqueuePendingDelete(listId: string): void {
+    const operation: PendingListDeleteOperation = {
+      operationId: `op-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+      kind: 'delete',
+      listId
+    };
+
+    store.pendingMutationQueue = [...store.pendingMutationQueue, operation];
+  }
+
+  function removePendingCreateIfPresent(listId: string): boolean {
+    const existingCreate = store.pendingMutationQueue.find(
+      (operation): operation is PendingListCreateOperation =>
+        operation.kind === 'create' && operation.tempListId === listId
+    );
+
+    if (!existingCreate) {
+      return false;
+    }
+
+    store.pendingMutationQueue = store.pendingMutationQueue.filter(
+      (operation) => !(operation.kind === 'create' && operation.tempListId === listId)
+    );
+    return true;
+  }
+
+  async function refreshListsFromServer(accessToken: string): Promise<void> {
+    const refreshed = await listsApiPort.getLists(accessToken);
+    const pendingCreates = store.pendingMutationQueue
+      .filter((operation): operation is PendingListCreateOperation => operation.kind === 'create')
+      .map((operation) =>
+        createPendingList(operation.payload.name, operation.createdAt, operation.tempListId)
+      );
+
+    store.lists = [...pendingCreates, ...refreshed];
+  }
+
+  async function flushPendingMutations(): Promise<void> {
+    if (!isOnline() || store.pendingMutationQueue.length === 0) {
+      return;
+    }
+
+    let token = '';
+    try {
+      token = authSession.accessToken.value;
+      if (token.length === 0) {
+        throw new Error('missing-access-token');
+      }
+    } catch {
+      store.errorMessage = 'Synchronisation en attente: session invalide.';
+      return;
+    }
+
+    const remainingOperations: PendingListMutationOperation[] = [];
+    const createdListIdByTempId = new Map<string, string>();
+
+    for (const operation of store.pendingMutationQueue) {
+      try {
+        if (operation.kind === 'create') {
+          const created = await listsApiPort.createList(token, operation.payload);
+          createdListIdByTempId.set(operation.tempListId, created.id);
+          store.lists = [
+            created,
+            ...store.lists.filter((item) => item.id !== operation.tempListId)
+          ];
+          continue;
+        }
+
+        const resolvedListId = createdListIdByTempId.get(operation.listId);
+
+        if (resolvedListId) {
+          await listsApiPort.deleteList(token, resolvedListId);
+          store.lists = store.lists.filter((item) => item.id !== resolvedListId);
+          continue;
+        }
+
+        if (removePendingCreateIfPresent(operation.listId)) {
+          store.lists = store.lists.filter((item) => item.id !== operation.listId);
+          continue;
+        }
+
+        await listsApiPort.deleteList(token, operation.listId);
+        store.lists = store.lists.filter((item) => item.id !== operation.listId);
+      } catch {
+        remainingOperations.push(operation);
+      }
+    }
+
+    store.pendingMutationQueue = remainingOperations;
+
+    if (remainingOperations.length > 0) {
+      store.errorMessage = 'Certaines listes restent en attente de synchronisation.';
+    } else if (store.errorMessage.includes('synchronisation')) {
+      store.errorMessage = '';
+    }
   }
 
   async function loadLists(): Promise<void> {
@@ -53,15 +182,17 @@ export function useLists(deps: UseListsDependencies = {}) {
   async function createList(name: string): Promise<boolean> {
     resetError();
 
-    if (!isOnline()) {
-      store.errorMessage = 'Mode hors ligne: creation de liste indisponible.';
-      return false;
-    }
-
     const normalizedName = name.trim();
     if (normalizedName.length === 0) {
       store.errorMessage = 'Le nom de la liste est obligatoire.';
       return false;
+    }
+
+    if (!isOnline()) {
+      const pendingList = enqueuePendingCreate(normalizedName);
+      store.lists = [pendingList, ...store.lists];
+      store.errorMessage = 'Mode hors ligne: liste en attente de synchronisation.';
+      return true;
     }
 
     try {
@@ -83,7 +214,18 @@ export function useLists(deps: UseListsDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      store.errorMessage = 'Mode hors ligne: suppression de liste indisponible.';
+      if (removePendingCreateIfPresent(listId)) {
+        store.lists = store.lists.filter((item) => item.id !== listId);
+        store.errorMessage = store.pendingMutationQueue.length === 0
+          ? ''
+          : 'Certaines listes restent en attente de synchronisation.';
+        return;
+      }
+
+      enqueuePendingDelete(listId);
+
+      store.lists = store.lists.filter((item) => item.id !== listId);
+      store.errorMessage = 'Mode hors ligne: suppression de liste en attente de synchronisation.';
       return;
     }
 
@@ -107,6 +249,7 @@ export function useLists(deps: UseListsDependencies = {}) {
     loadLists,
     createList,
     deleteList,
+    flushPendingMutations,
     resetError
   };
 }
