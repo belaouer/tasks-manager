@@ -18,6 +18,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Hardening realtime: reconnect/resubscribe et statut socket visible en UI.
 - Observabilite realtime: metriques de reconnexion + horodatages de sante socket.
 - Fondations offline-first UX: statut reseau frontend + garde-fous sur ecritures hors ligne.
+- Retries metier sur conflits de synchronisation pour les mutations Tasks.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
@@ -119,12 +120,14 @@ Niveaux couverts:
 - E2E multi-onglets: verification de coherence des donnees entre clients.
 - Integration realtime: verification des metriques d'observabilite.
 - Integration offline: verification des blocages metier lists/tasks hors ligne.
+- Integration sync conflicts: verification du retry metier sur erreur 409.
 
 ## Prochaine etape
 
 Prochaine evolution suggeree:
 
-- retries metier sur conflits de synchro.
+- file de synchro offline locale (write-behind),
+- gestion explicite des conflits metier multi-utilisateurs.
 
 ## Dependance ajoutee a cette etape
 

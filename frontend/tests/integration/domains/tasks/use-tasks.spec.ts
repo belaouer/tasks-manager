@@ -166,6 +166,36 @@ describe('useTasks integration', () => {
     expect(api.deleteTask).not.toHaveBeenCalled();
   });
 
+  it('retries completeTask once after synchronization conflict', async () => {
+    const initial = createTask({ id: 'task-1', completedAt: null });
+    const completed = createTask({ id: 'task-1', completedAt: '2026-07-13T09:30:00.000Z' });
+
+    const api = {
+      getListTasks: vi.fn(async () => [initial]),
+      createTask: vi.fn(),
+      completeTask: vi
+        .fn()
+        .mockRejectedValueOnce({ status: 409 })
+        .mockResolvedValueOnce(completed),
+      reopenTask: vi.fn(),
+      deleteTask: vi.fn()
+    };
+
+    const tasks = useTasks({
+      getAccessToken: () => 'access-token',
+      isOnline: () => true,
+      tasksApi: api as any
+    });
+
+    await tasks.loadTasks('list-1');
+    await tasks.completeTask('list-1', 'task-1');
+
+    expect(api.completeTask).toHaveBeenCalledTimes(2);
+    expect(api.getListTasks).toHaveBeenCalledTimes(2);
+    expect(tasks.getTasksForList('list-1').value[0]?.completedAt).toBe('2026-07-13T09:30:00.000Z');
+    expect(tasks.errorMessage.value).toBe('');
+  });
+
   it('subscribes realtime and routes incoming events to handlers', () => {
     const onTaskUpsert = vi.fn();
     const onTaskDeleted = vi.fn();

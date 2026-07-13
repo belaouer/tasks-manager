@@ -7,6 +7,7 @@ import { HttpTasksApiAdapter } from '../infrastructure/http-tasks-api.adapter';
 const TASKS_STATE_KEY = 'tasks-manager.tasks.by-list';
 const TASKS_LOADING_KEY = 'tasks-manager.tasks.loading';
 const TASKS_ERROR_KEY = 'tasks-manager.tasks.error';
+const HTTP_CONFLICT_STATUS = 409;
 
 interface UseTasksDependencies {
   readonly getAccessToken?: () => string;
@@ -64,6 +65,31 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     return token;
   }
 
+  function isConflictError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+
+    const candidate = error as {
+      status?: unknown;
+      statusCode?: unknown;
+      response?: { status?: unknown };
+      data?: { statusCode?: unknown };
+    };
+
+    return (
+      candidate.status === HTTP_CONFLICT_STATUS ||
+      candidate.statusCode === HTTP_CONFLICT_STATUS ||
+      candidate.response?.status === HTTP_CONFLICT_STATUS ||
+      candidate.data?.statusCode === HTTP_CONFLICT_STATUS
+    );
+  }
+
+  async function refreshListFromServer(accessToken: string, listId: string): Promise<void> {
+    const refreshed = await tasksApi.getListTasks(accessToken, listId);
+    writeListTasks(listId, refreshed);
+  }
+
   async function loadTasks(listId: string): Promise<void> {
     resetError();
 
@@ -107,7 +133,20 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       const created = await tasksApi.createTask(token, listId, payload);
       writeListTasks(listId, [created, ...readListTasks(listId)]);
       return true;
-    } catch {
+    } catch (error) {
+      if (isConflictError(error)) {
+        try {
+          const token = getRequiredToken();
+          await refreshListFromServer(token, listId);
+          const created = await tasksApi.createTask(token, listId, payload);
+          writeListTasks(listId, [created, ...readListTasks(listId)]);
+          return true;
+        } catch {
+          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          return false;
+        }
+      }
+
       errorMessage.value = 'Creation de tache impossible.';
       return false;
     }
@@ -151,7 +190,20 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       const token = getRequiredToken();
       const updated = await tasksApi.completeTask(token, listId, taskId);
       updateTaskInList(listId, updated);
-    } catch {
+    } catch (error) {
+      if (isConflictError(error)) {
+        try {
+          const token = getRequiredToken();
+          await refreshListFromServer(token, listId);
+          const updated = await tasksApi.completeTask(token, listId, taskId);
+          updateTaskInList(listId, updated);
+          return;
+        } catch {
+          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          return;
+        }
+      }
+
       errorMessage.value = 'Impossible de completer cette tache.';
     }
   }
@@ -168,7 +220,20 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       const token = getRequiredToken();
       const updated = await tasksApi.reopenTask(token, listId, taskId);
       updateTaskInList(listId, updated);
-    } catch {
+    } catch (error) {
+      if (isConflictError(error)) {
+        try {
+          const token = getRequiredToken();
+          await refreshListFromServer(token, listId);
+          const updated = await tasksApi.reopenTask(token, listId, taskId);
+          updateTaskInList(listId, updated);
+          return;
+        } catch {
+          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          return;
+        }
+      }
+
       errorMessage.value = 'Impossible de reouvrir cette tache.';
     }
   }
@@ -188,7 +253,23 @@ export function useTasks(deps: UseTasksDependencies = {}) {
         listId,
         readListTasks(listId).filter((item) => item.id !== taskId)
       );
-    } catch {
+    } catch (error) {
+      if (isConflictError(error)) {
+        try {
+          const token = getRequiredToken();
+          await refreshListFromServer(token, listId);
+          await tasksApi.deleteTask(token, listId, taskId);
+          writeListTasks(
+            listId,
+            readListTasks(listId).filter((item) => item.id !== taskId)
+          );
+          return;
+        } catch {
+          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          return;
+        }
+      }
+
       errorMessage.value = 'Suppression de tache impossible.';
     }
   }
