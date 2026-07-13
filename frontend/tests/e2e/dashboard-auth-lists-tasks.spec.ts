@@ -179,7 +179,10 @@ test('auth + lists + tasks flow', async ({ page }) => {
   await expect(page.getByText('Informations completes de la tache selectionnee.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Completer' }).first().click();
-  await expect(page.getByText('Terminee').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mes taches terminees' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Afficher \(1\)/ })).toBeVisible();
+  await page.getByRole('button', { name: /Afficher \(1\)/ }).click();
+  await expect(page.getByRole('heading', { name: 'Tester le flow e2e' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Supprimer la tache' }).first().click();
   await expect(page.getByRole('heading', { name: 'Confirmer la suppression' })).toBeVisible();
