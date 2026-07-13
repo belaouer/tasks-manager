@@ -115,7 +115,27 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Mettre à jour les tests E2E globaux pour couvrir le flux complet Tasks (create/complete/delete).
+1. Préparer la finalisation de la branche Tasks (revue finale + merge vers main).
+
+## Etape réalisée: E2E global inter-domaines avec Tasks
+
+Eléments implémentés:
+
+- Le scénario E2E global couvre désormais Auth + Users + Lists + Tasks.
+- Extension de `test/app.e2e-spec.ts` avec un parcours complet Tasks:
+  - création de deux identités via Auth,
+  - création de listes,
+  - création de tâches,
+  - lecture des tâches par liste,
+  - completion/réouverture,
+  - vérification d'isolation inter-utilisateurs (403),
+  - suppression propriétaire et vérification post-suppression.
+
+Décisions clés:
+
+- Le scénario est construit en mode boîte noire HTTP pour valider le comportement réel inter-domaines.
+- L'environnement E2E reste en `in-memory` pour conserver la rapidité et la stabilité des exécutions.
+- Le test complète les validations d'intégration module par module avec un flux métier bout-en-bout élargi.
 
 ## Etape réalisée: Presentation Tasks + tests d'intégration
 
