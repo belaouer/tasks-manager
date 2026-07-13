@@ -174,6 +174,10 @@ test('auth + lists + tasks flow', async ({ page }) => {
   await page.getByRole('button', { name: 'Ajouter la tache' }).click();
 
   await expect(page.getByText('Tester le flow e2e')).toBeVisible();
+  await page.getByRole('button', { name: 'Details' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Detail de la tache' })).toBeVisible();
+  await expect(page.getByText('Informations completes de la tache selectionnee.')).toBeVisible();
+
   await page.getByRole('button', { name: 'Completer' }).first().click();
   await expect(page.getByText('Terminee').first()).toBeVisible();
 });

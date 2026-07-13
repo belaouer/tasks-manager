@@ -21,6 +21,8 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Fondations offline-first UX: statut reseau frontend + garde-fous sur ecritures hors ligne.
 - Retries metier sur conflits de synchronisation pour les mutations Tasks.
 - File locale write-behind pour creation de taches hors ligne + flush auto au retour reseau.
+- Dashboard restructure en 3 zones (left/main/right) avec left sidebar retractable.
+- Right sidebar detail de tache activee sur selection d'une tache.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
@@ -152,9 +154,8 @@ Statut global:
 P0 - Critique (alignement direct cahier)
 
 1. Pinia store global: fait pour auth/listes/taches. Reste a finaliser la migration complete de la couche presentation en composants dedies (TaskCard/TaskForm/Sidebar/TaskDetail) pour supprimer les derniers couplages page-usecase.
-2. Refaire la page principale en 3 zones conformes:
-	left sidebar retractable, main content, right sidebar detail.
-3. Ajouter la right sidebar detail tache sur clic avec infos completes (description courte/longue, dates, statut) et action suppression.
+2. Page principale 3 zones: fait (left sidebar retractable + main content + right sidebar detail).
+3. Right sidebar detail tache: fait (selection, details complets, action suppression sans modale).
 4. Ajouter les modales de confirmation obligatoires:
 	suppression liste (avec warning suppression cascade) et suppression tache.
 5. Ajouter la section "Mes taches terminees" dediee, repliee par defaut et depliable.
