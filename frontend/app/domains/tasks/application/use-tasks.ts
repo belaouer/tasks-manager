@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import { useAuthSession } from '~/domains/auth/application/use-auth-session';
 import type { CreateTaskPayload, TaskSummary } from '../domain/task-summary';
+import type { TaskDeletedEvent } from '../domain/tasks-realtime-events';
 import { HttpTasksApiAdapter } from '../infrastructure/http-tasks-api.adapter';
 
 const TASKS_STATE_KEY = 'tasks-manager.tasks.by-list';
@@ -100,9 +101,28 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   }
 
   function updateTaskInList(listId: string, task: TaskSummary): void {
+    const current = readListTasks(listId);
+    const index = current.findIndex((item) => item.id === task.id);
+
+    if (index < 0) {
+      writeListTasks(listId, [task, ...current]);
+      return;
+    }
+
     writeListTasks(
       listId,
-      readListTasks(listId).map((item) => (item.id === task.id ? task : item))
+      current.map((item) => (item.id === task.id ? task : item))
+    );
+  }
+
+  function upsertTaskFromRealtime(task: TaskSummary): void {
+    updateTaskInList(task.listId, task);
+  }
+
+  function deleteTaskFromRealtime(payload: TaskDeletedEvent): void {
+    writeListTasks(
+      payload.listId,
+      readListTasks(payload.listId).filter((item) => item.id !== payload.taskId)
     );
   }
 
@@ -154,6 +174,8 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     completeTask,
     reopenTask,
     deleteTask,
+    upsertTaskFromRealtime,
+    deleteTaskFromRealtime,
     resetError
   };
 }

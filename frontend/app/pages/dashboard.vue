@@ -208,9 +208,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useLists } from '~/domains/lists/application/use-lists';
 import { useTasks } from '~/domains/tasks/application/use-tasks';
+import { useTasksRealtime } from '~/domains/tasks/application/use-tasks-realtime';
 import { isTaskCompleted } from '~/domains/tasks/domain/task-summary';
 import { useThemeMode } from '~/domains/theme/application/use-theme-mode';
 
@@ -235,8 +236,14 @@ const {
   createTask,
   completeTask,
   reopenTask,
-  deleteTask
+  deleteTask,
+  upsertTaskFromRealtime,
+  deleteTaskFromRealtime
 } = useTasks();
+const { subscribeToList, stop: stopRealtime } = useTasksRealtime({
+  onTaskUpsert: (task) => upsertTaskFromRealtime(task),
+  onTaskDeleted: (payload) => deleteTaskFromRealtime(payload)
+});
 
 const listName = ref('');
 const selectedListId = ref('');
@@ -307,6 +314,7 @@ function isSelectedList(listId: string): boolean {
 async function selectList(listId: string): Promise<void> {
   selectedListId.value = listId;
   await loadTasks(listId);
+  subscribeToList(listId);
 }
 
 async function handleCreateTask(): Promise<void> {
@@ -363,5 +371,9 @@ onMounted(async () => {
   if (lists.value.length > 0) {
     await selectList(lists.value[0].id);
   }
+});
+
+onUnmounted(() => {
+  stopRealtime();
 });
 </script>
