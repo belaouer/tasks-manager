@@ -113,6 +113,20 @@ npm run build
 npm run preview
 ```
 
+### Docker
+
+Le frontend dispose maintenant d'un Dockerfile multi-stage pour une image de production Nuxt.
+
+```bash
+docker compose up --build
+```
+
+Dans la composition locale:
+
+- frontend exposé sur `http://localhost:3001`
+- backend exposé sur `http://localhost:3000`
+- frontend cible le backend via `http://backend:3000`
+
 ## Tests
 
 ```bash
@@ -179,6 +193,21 @@ P2 - Livrable / industrialisation
 1. Ajouter le Dockerfile frontend (actuellement absent) et verifier l'integration docker-compose end-to-end.
 2. Completer la section README "avec plus de temps" sur priorites de tests et choix d'architecture frontend (Pinia, realtime, offline queue).
 3. Ajouter une check-list de conformite finale frontend pour valider chaque point du cahier avant livraison.
+
+## Check-list finale
+
+- Auth frontend connectee au backend existant.
+- Dashboard protege par middleware.
+- Lists et Tasks montes sur des domaines frontend dedies.
+- UI principale en 3 zones.
+- Detail de tache dans la sidebar droite.
+- Confirmation de suppression pour liste et tache.
+- Section des taches terminees repliee par defaut.
+- Socket.IO avec reconnect/resubscribe et observabilite.
+- Offline write-behind pour Lists et Tasks.
+- Retry differe avec backoff exponentiel sur la synchro.
+- Tests unitaires, integration et e2e operationnels.
+- Dockerfile frontend et integration docker-compose ajoutés.
 
 ## Dependance ajoutee a cette etape
 

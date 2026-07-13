@@ -37,5 +37,22 @@ services:
       postgres:
         condition: service_healthy
 
+  frontend:
+    container_name: tasks-manager-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      NUXT_PUBLIC_API_BASE_URL: http://backend:3000
+    ports:
+      - "3001:3000"
+    depends_on:
+      backend:
+        condition: service_started
+
 volumes:
   postgres_data:
