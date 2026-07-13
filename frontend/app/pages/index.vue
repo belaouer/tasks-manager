@@ -10,28 +10,24 @@
       {{ content.lead }}
     </p>
     <div class="mt-6 flex flex-wrap gap-3">
-      <a
+      <NuxtLink
         class="rounded-xl px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
         :class="isDarkMode
           ? 'bg-cyan-400/20 text-cyan-200 ring-1 ring-cyan-300/30 hover:bg-cyan-400/30'
           : 'bg-slate-900 text-slate-100 hover:bg-slate-800'"
-        href="http://localhost:3000/docs"
-        target="_blank"
-        rel="noreferrer"
+        to="/auth/register"
       >
-        Voir l'API backend
-      </a>
-      <a
+        Creer un compte
+      </NuxtLink>
+      <NuxtLink
         class="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
         :class="isDarkMode
           ? 'border-slate-600 bg-slate-800/70 text-slate-200 hover:bg-slate-800'
           : 'border-slate-300 bg-white/80 text-slate-700 hover:bg-white'"
-        href="https://nuxt.com/docs"
-        target="_blank"
-        rel="noreferrer"
+        to="/auth/login"
       >
-        Guide Nuxt
-      </a>
+        Me connecter
+      </NuxtLink>
     </div>
 
     <div class="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
