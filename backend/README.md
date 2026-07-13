@@ -41,12 +41,6 @@ src/
       domain/
         entities/
         value-objects/
-        services/
-        ports/
-        exceptions/
-        factories/
-      application/
-        use-cases/
         dto/
         services/
       infrastructure/
@@ -58,10 +52,6 @@ src/
         jwt/
         services/
       presentation/
-        controllers/
-        dto/
-        guards/
-        filters/
         mappers/
   shared/
     domain/
@@ -105,28 +95,14 @@ Uniquement les dépendances nécessaires à l'authentification ont été ajouté
 
 Runtime:
 
-- `@nestjs/jwt`
-- `@nestjs/passport`
-- `@nestjs/config`
 - `joi`
 - `@nestjs/swagger`
 - `swagger-ui-express`
 - `passport`
 - `passport-jwt`
-- `passport-local`
-- `bcrypt`
-- `class-validator`
-- `class-transformer`
-- `cookie-parser`
-
-Type definitions (dev):
 
 - `@types/passport-jwt`
 - `@types/passport-local`
-- `@types/bcrypt`
-- `@types/cookie-parser`
-
-Non installé volontairement à ce stade:
 
 - WebSocket / Socket.io
 
@@ -134,67 +110,33 @@ Non installé volontairement à ce stade:
 
 1. Finaliser la passe documentaire backend (cleanup des sections historiques et synthèse finale orientée livrable).
 
-## Etape réalisée: Docker Compose backend + PostgreSQL
-
-Eléments implémentés:
-
 - Ajout d'un `docker-compose.yml` à la racine du workspace avec:
   - service `postgres` (PostgreSQL 16 + volume persistant + healthcheck)
   - service `backend` (build via `backend/Dockerfile`)
-- Configuration des variables backend pour l'exécution conteneurisée:
-  - `PERSISTENCE_DRIVER=prisma`
   - `DATABASE_URL=postgresql://postgres:postgres@postgres:5432/tasks_manager`
 
 Décisions clés:
 
 - Le compose orchestre backend et base relationnelle dans un même réseau Docker.
-- Le backend attend explicitement que PostgreSQL soit healthy avant démarrage.
-- La persistance PostgreSQL est conservée via volume nommé `postgres_data`.
-
-Commandes Docker Compose:
-
 - Démarrage:
   - `docker compose up --build`
 - Arrêt:
   - `docker compose down`
 
-## Etape réalisée: Dockerisation du backend
-
-Eléments implémentés:
 
 - Ajout d'un `Dockerfile` backend multi-stage:
   - stage `deps` (installation dépendances + `prisma generate`)
-  - stage `build` (compilation NestJS + prune des dépendances dev)
-  - stage `runtime` (image d'exécution minimale)
-- Ajout d'un `.dockerignore` backend pour réduire le contexte de build et accélérer la construction d'image.
 
 Décisions clés:
 
-- Le build multi-stage réduit la taille de l'image finale et isole les responsabilités build/runtime.
-- Le client Prisma est généré au build pour garantir la cohérence runtime.
-- Le runtime démarre uniquement `dist/main` avec `NODE_ENV=production`.
-
-Commandes Docker backend:
-
-- Build image:
-  - `docker build -t tasks-manager-backend ./backend`
-- Run conteneur:
   - `docker run --rm -p 3000:3000 --env-file backend/.env.example tasks-manager-backend`
 
 ## Etape réalisée: Tests d'intégration WebSocket Tasks
 
 Eléments implémentés:
-
-- Nouveau test d'intégration `tasks.gateway.integration.spec.ts` pour le gateway temps réel.
-- Scénarios couverts:
-  - connexion WebSocket rejetée sans token JWT,
   - join room par liste (`lists:join`) et leave room (`lists:leave`),
   - réception des événements temps réel côté client:
     - `task:created`
-    - `task:completed`
-    - `task:updated`
-    - `task:deleted`
-  - isolation entre rooms: un client sur une autre liste ne reçoit pas l'événement.
 
 Décisions clés:
 
