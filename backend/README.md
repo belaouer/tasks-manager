@@ -115,7 +115,120 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la finalisation de la branche Lists (revue finale + merge vers main).
+1. Préparer la finalisation de la branche Tasks (revue finale + merge vers main).
+
+## Etape réalisée: E2E global inter-domaines avec Tasks
+
+Eléments implémentés:
+
+- Le scénario E2E global couvre désormais Auth + Users + Lists + Tasks.
+- Extension de `test/app.e2e-spec.ts` avec un parcours complet Tasks:
+  - création de deux identités via Auth,
+  - création de listes,
+  - création de tâches,
+  - lecture des tâches par liste,
+  - completion/réouverture,
+  - vérification d'isolation inter-utilisateurs (403),
+  - suppression propriétaire et vérification post-suppression.
+
+Décisions clés:
+
+- Le scénario est construit en mode boîte noire HTTP pour valider le comportement réel inter-domaines.
+- L'environnement E2E reste en `in-memory` pour conserver la rapidité et la stabilité des exécutions.
+- Le test complète les validations d'intégration module par module avec un flux métier bout-en-bout élargi.
+
+## Etape réalisée: Presentation Tasks + tests d'intégration
+
+Eléments implémentés:
+
+- `TasksController` avec endpoints:
+  - `POST /lists/:listId/tasks` (création d'une tâche)
+  - `GET /lists/:listId/tasks` (lecture des tâches de la liste)
+  - `PATCH /lists/:listId/tasks/:taskId/complete` (marquage terminée)
+  - `PATCH /lists/:listId/tasks/:taskId/reopen` (réouverture)
+  - `DELETE /lists/:listId/tasks/:taskId` (suppression)
+- DTO Presentation:
+  - `CreateTaskRequestDto`
+  - `TaskSummaryResponseDto`
+- `TasksJwtAuthGuard` pour valider le bearer access token (`HS256`, issuer, audience).
+- `TasksExceptionFilter` pour mapper exceptions application/domaine Tasks vers des réponses HTTP cohérentes.
+- Tests d'intégration `tasks.controller.integration.spec.ts` couvrant:
+  - création,
+  - validation payload (400),
+  - authentification manquante (401),
+  - isolation entre utilisateurs/listes,
+  - completion/réouverture,
+  - accès cross-user interdit (403),
+  - suppression propriétaire (204),
+  - suppression d'une tâche inexistante (404).
+
+Décisions clés:
+
+- Les routes Tasks sont imbriquées sous `lists/:listId` pour expliciter le contexte de liste au niveau API.
+- La sécurité d'accès Tasks est portée par la couche Presentation (guard JWT), sans fuite de dépendances techniques vers le domaine.
+- Le mapping d'erreurs est centralisé dans un filter dédié pour garantir un contrat API stable et maintenable.
+
+## Etape réalisée: Infrastructure Tasks (Persistence + Services)
+
+Eléments implémentés:
+
+- Module dynamique `TasksPersistenceModule.register({ driver })`.
+- Drivers supportés pour Tasks: `in-memory`, `typeorm`, `prisma`.
+- Adapters repository Tasks pour chaque driver derrière le port unique `TasksRepositoryPort`.
+- Mapper persistence <-> domaine Tasks + store in-memory.
+- Adapters infrastructure de base: `TasksSystemClockAdapter`, `TasksUuidIdGeneratorAdapter`.
+- Branchement complet dans `TasksModule` (use cases injectables via ports abstraits).
+- Modèle Prisma `Task` ajouté au schema.
+
+Décisions clés:
+
+- La couche Application Tasks reste inchangée: seule l'infrastructure est branchée.
+- Le choix du driver reste transparent pour les use cases grâce au port `TasksRepositoryPort`.
+- Le pattern est aligné sur Auth, Users et Lists pour garder une architecture homogène et maintenable.
+
+## Etape réalisée: Socle métier Tasks (Domain + Application)
+
+Eléments implémentés:
+
+- Domaine Tasks:
+  - Entité `Task` (création, rehydratation, completion, réouverture).
+  - Value Objects `TaskId`, `TaskListId`, `TaskOwnerUserId`, `TaskShortDescription`, `TaskLongDescription`, `TaskDueDate`.
+  - Exceptions domaine dédiées (id/list/owner/description/date invalides).
+  - Ports abstraits: `TasksRepositoryPort`, `TasksClockPort`, `TasksIdGeneratorPort`.
+- Application Tasks:
+  - Use cases `CreateTaskUseCase`, `GetListTasksUseCase`, `CompleteTaskUseCase`, `ReopenTaskUseCase`, `DeleteTaskUseCase`.
+  - Commands/DTOs dédiés (`CreateTaskCommand`, `GetListTasksCommand`, `CompleteTaskCommand`, `ReopenTaskCommand`, `DeleteTaskCommand`, `TaskSummaryDto`).
+  - Exceptions applicatives (`TaskNotFoundApplicationException`, `TaskAccessDeniedApplicationException`).
+- Tests unitaires Tasks:
+  - `create-task.use-case.spec.ts`
+  - `get-list-tasks.use-case.spec.ts`
+  - `complete-task.use-case.spec.ts`
+  - `reopen-task.use-case.spec.ts`
+  - `delete-task.use-case.spec.ts`
+
+Décisions clés:
+
+- Le périmètre reste strictement Domain + Application: aucune dépendance ORM/HTTP ajoutée à cette étape.
+- L'isolation des données est portée dès l'application via le couple `ownerUserId` + `listId` dans les use cases critiques.
+- Les règles d'état d'une tâche (terminée/non terminée) sont encapsulées dans l'entité pour préserver les invariants métier.
+
+## Etape réalisée: Transition vers le domaine Tasks
+
+Eléments implémentés:
+
+- Création du module `TasksModule` sans logique métier.
+- Branchement de `TasksModule` dans la composition racine (`AppModule`).
+- Mise en place de l'arborescence hexagonale complète `src/domains/tasks`:
+  - `domain` (entities, value-objects, services, ports, exceptions, factories)
+  - `application` (dto, use-cases, services)
+  - `infrastructure` (persistence/common/typeorm/prisma, services)
+  - `presentation` (controllers, dto, guards, filters, mappers)
+
+Décisions clés:
+
+- Aucune logique métier Tasks n'est ajoutée à ce jalon pour isoler le changement structurel.
+- Les comportements Auth, Users et Lists restent inchangés.
+- Le squelette Tasks suit exactement les conventions DDD + Hexagonal déjà établies.
 
 ## Etape réalisée: E2E global inter-domaines avec Lists
 

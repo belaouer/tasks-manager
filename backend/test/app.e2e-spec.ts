@@ -3,7 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 
-describe('Auth + Users + Lists (e2e)', () => {
+describe('Auth + Users + Lists + Tasks (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -229,6 +229,115 @@ describe('Auth + Users + Lists (e2e)', () => {
       ownerListsAfterDeleteResponse.body as Array<{ id: string }>
     ).map((item) => item.id);
     expect(ownerListIdsAfterDelete).not.toContain(ownerListId);
+  });
+
+  it('register -> tasks create/list/complete/reopen/delete ownership flow', async () => {
+    const ownerRegisterResponse = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'tasks-owner.e2e@example.com',
+        password: 'Password123',
+        firstName: 'TasksOwner',
+        lastName: 'E2E',
+      })
+      .expect(201);
+
+    const ownerAccessToken = ownerRegisterResponse.body.accessToken as string;
+
+    const secondRegisterResponse = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'tasks-second.e2e@example.com',
+        password: 'Password123',
+        firstName: 'TasksSecond',
+        lastName: 'E2E',
+      })
+      .expect(201);
+
+    const secondAccessToken = secondRegisterResponse.body.accessToken as string;
+
+    const ownerListResponse = await request(app.getHttpServer())
+      .post('/lists')
+      .set('Authorization', bearer(ownerAccessToken))
+      .send({ name: 'Owner tasks list' })
+      .expect(201);
+
+    const ownerListId = ownerListResponse.body.id as string;
+
+    const secondListResponse = await request(app.getHttpServer())
+      .post('/lists')
+      .set('Authorization', bearer(secondAccessToken))
+      .send({ name: 'Second tasks list' })
+      .expect(201);
+
+    const secondListId = secondListResponse.body.id as string;
+
+    const ownerTaskResponse = await request(app.getHttpServer())
+      .post(`/lists/${ownerListId}/tasks`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .send({
+        shortDescription: 'Prepare report',
+        longDescription: 'Draft and proofread before submission',
+        dueDate: '2026-06-10T12:00:00.000Z',
+      })
+      .expect(201);
+
+    const ownerTaskId = ownerTaskResponse.body.id as string;
+    expect(ownerTaskResponse.body.completed).toBe(false);
+
+    await request(app.getHttpServer())
+      .post(`/lists/${secondListId}/tasks`)
+      .set('Authorization', bearer(secondAccessToken))
+      .send({
+        shortDescription: 'Second task',
+        dueDate: '2026-06-11T12:00:00.000Z',
+      })
+      .expect(201);
+
+    const ownerTasksResponse = await request(app.getHttpServer())
+      .get(`/lists/${ownerListId}/tasks`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    const ownerTaskIds = (ownerTasksResponse.body as Array<{ id: string }>).map(
+      (item) => item.id,
+    );
+    expect(ownerTaskIds).toContain(ownerTaskId);
+
+    const completeResponse = await request(app.getHttpServer())
+      .patch(`/lists/${ownerListId}/tasks/${ownerTaskId}/complete`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    expect(completeResponse.body.completed).toBe(true);
+
+    await request(app.getHttpServer())
+      .patch(`/lists/${ownerListId}/tasks/${ownerTaskId}/complete`)
+      .set('Authorization', bearer(secondAccessToken))
+      .expect(403);
+
+    const reopenResponse = await request(app.getHttpServer())
+      .patch(`/lists/${ownerListId}/tasks/${ownerTaskId}/reopen`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    expect(reopenResponse.body.completed).toBe(false);
+
+    await request(app.getHttpServer())
+      .delete(`/lists/${ownerListId}/tasks/${ownerTaskId}`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(204);
+
+    const ownerTasksAfterDeleteResponse = await request(app.getHttpServer())
+      .get(`/lists/${ownerListId}/tasks`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    const ownerTaskIdsAfterDelete = (
+      ownerTasksAfterDeleteResponse.body as Array<{ id: string }>
+    ).map((item) => item.id);
+
+    expect(ownerTaskIdsAfterDelete).not.toContain(ownerTaskId);
   });
 });
 
