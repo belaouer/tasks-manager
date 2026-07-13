@@ -50,7 +50,9 @@ describe('TasksGateway (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'gateway.owner@example.com',
+        emailConfirmation: 'gateway.owner@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Owner',
         lastName: 'Gateway',
       })
@@ -70,7 +72,9 @@ describe('TasksGateway (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'gateway.second@example.com',
+        emailConfirmation: 'gateway.second@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Second',
         lastName: 'Gateway',
       })

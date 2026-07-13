@@ -42,7 +42,9 @@ describe('ListsController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'lists.owner@example.com',
+        emailConfirmation: 'lists.owner@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Owner',
         lastName: 'List',
       })
@@ -54,7 +56,9 @@ describe('ListsController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'lists.second@example.com',
+        emailConfirmation: 'lists.second@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Second',
         lastName: 'List',
       })

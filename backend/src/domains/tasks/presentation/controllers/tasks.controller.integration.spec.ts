@@ -43,7 +43,9 @@ describe('TasksController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'tasks.owner@example.com',
+        emailConfirmation: 'tasks.owner@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Owner',
         lastName: 'Task',
       })
@@ -55,7 +57,9 @@ describe('TasksController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'tasks.second@example.com',
+        emailConfirmation: 'tasks.second@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Second',
         lastName: 'Task',
       })

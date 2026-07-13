@@ -1,5 +1,7 @@
 # Frontend - Tasks Manager (Nuxt 4)
 
+[![frontend-ci](https://github.com/belaouer/tasks-manager/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/belaouer/tasks-manager/actions/workflows/frontend-ci.yml)
+
 Ce frontend est la couche presentation du projet Tasks Manager.
 Il demarre par une fondation UI claire, responsive et maintenable, avant integration progressive des flux metier.
 
@@ -12,6 +14,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Pinia active pour la gestion d'etat global frontend.
 - Toggle de theme sombre/clair avec persistence locale.
 - Module Auth frontend en place (register/login/logout/refresh).
+- Formulaire d'inscription complet avec confirmation email + confirmation mot de passe.
 - Dashboard protege par middleware d'authentification.
 - Module Lists frontend en place (lecture/creation/suppression).
 - Module Tasks frontend en place (lecture/creation/completion/reouverture/suppression).
@@ -164,51 +167,23 @@ Il s'execute sur `push` et `pull_request` vers `main` quand des fichiers fronten
 - `npm run test:integration`
 - `npm run build`
 
-## Audit Frontend vs Technical Test
+## Conformite Frontend (Technical Test)
 
-Statut global:
-
-- Base frontend solide (auth, listes, taches, realtime, offline, retries) en place.
-- Plusieurs exigences fonctionnelles/UI du cahier sont encore a finaliser.
-
-### Deja couvert cote frontend
-
-- Authentification register/login + bootstrap session au chargement.
-- Etat global auth/listes/taches migre sur Pinia (fondation P0.1).
-- Route protegee via middleware Nuxt.
-- Flux listes/taches principal (creation, suppression, completion, reouverture).
-- Synchronisation temps reel Socket.IO sur les taches.
-- Tests unitaires/integration/e2e deja operationnels.
-
-### Restant a faire par priorite
-
-P0 - Critique (alignement direct cahier)
-
-1. Pinia store global: fait pour auth/listes/taches. Reste a finaliser la migration complete de la couche presentation en composants dedies (TaskCard/TaskForm/Sidebar/TaskDetail) pour supprimer les derniers couplages page-usecase.
-2. Page principale 3 zones: fait (left sidebar retractable + main content + right sidebar detail).
-3. Right sidebar detail tache: fait (selection, details complets, action suppression sans modale).
-4. Modales de confirmation suppression: fait (liste avec warning cascade + tache).
-5. Ajouter la section "Mes taches terminees" dediee, repliee par defaut et depliable: fait.
-
-P1 - Important (qualite produit / robustesse)
-
-1. Mettre en place un intercepteur HTTP Nuxt pour refresh transparent centralise et gestion uniforme des 401 (refresh puis redirection login si echec), au lieu d'une logique principalement au bootstrap: fait.
-2. Finaliser le mode offline write-behind pour toutes les mutations (pas seulement creation), avec strategie de retry/exponential backoff et remontes d'etat utilisateur claires.
-	- couverture Tasks hors ligne: faite.
-	- couverture Lists hors ligne: faite.
-	- reste a industrialiser: monitoring plus pousse et resilience multi-tentatives plus fine.
-3. Renforcer les tests e2e sur les exigences UI du cahier:
-	detail sidebar, section terminees, modales, cas token expire et redirection login.
-
-P2 - Livrable / industrialisation
-
-1. Ajouter le Dockerfile frontend (actuellement absent) et verifier l'integration docker-compose end-to-end.
-2. Completer la section README "avec plus de temps" sur priorites de tests et choix d'architecture frontend (Pinia, realtime, offline queue).
-3. Ajouter une check-list de conformite finale frontend pour valider chaque point du cahier avant livraison.
+- Auth: login + register avec confirmation email/mot de passe.
+- Protection de routes via middlewares Nuxt (`authenticated`, `guest`).
+- Page principale en 3 zones (left/main/right) avec right sidebar detail conditionnelle.
+- Suppressions protegees par modales de confirmation.
+- Section `Mes taches terminees` masquee par defaut et depliable.
+- WebSocket Socket.IO avec rooms par liste, mise a jour Pinia sans re-fetch HTTP systematique.
+- Pinia pour les etats globaux auth/listes/taches.
+- Intercepteur HTTP Nuxt pour refresh transparent sur 401 + redirection login en cas d'echec.
+- Dockerfile frontend + integration `docker-compose`.
+- CI frontend dediee (`frontend-ci`: tests unitaires, integration, build).
 
 ## Check-list finale
 
 - Auth frontend connectee au backend existant.
+- Inscription avec confirmation email et confirmation mot de passe.
 - Dashboard protege par middleware.
 - Lists et Tasks montes sur des domaines frontend dedies.
 - UI principale en 3 zones.

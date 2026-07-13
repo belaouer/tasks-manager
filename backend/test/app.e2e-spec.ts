@@ -44,7 +44,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'not-an-email',
+        emailConfirmation: 'not-an-email',
         password: 'short',
+        passwordConfirmation: 'short',
         firstName: 'A',
         lastName: '',
       })
@@ -56,7 +58,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'auth.e2e@example.com',
+        emailConfirmation: 'auth.e2e@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Auth',
         lastName: 'E2E',
       })
@@ -106,7 +110,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'owner.e2e@example.com',
+        emailConfirmation: 'owner.e2e@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Owner',
         lastName: 'E2E',
       })
@@ -131,7 +137,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'second.e2e@example.com',
+        emailConfirmation: 'second.e2e@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Second',
         lastName: 'E2E',
       })
@@ -156,7 +164,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'lists-owner.e2e@example.com',
+        emailConfirmation: 'lists-owner.e2e@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'ListsOwner',
         lastName: 'E2E',
       })
@@ -168,7 +178,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'lists-second.e2e@example.com',
+        emailConfirmation: 'lists-second.e2e@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'ListsSecond',
         lastName: 'E2E',
       })
@@ -236,7 +248,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'tasks-owner.e2e@example.com',
+        emailConfirmation: 'tasks-owner.e2e@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'TasksOwner',
         lastName: 'E2E',
       })
@@ -248,7 +262,9 @@ describe('Auth + Users + Lists + Tasks (e2e)', () => {
       .post('/auth/register')
       .send({
         email: 'tasks-second.e2e@example.com',
+        emailConfirmation: 'tasks-second.e2e@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'TasksSecond',
         lastName: 'E2E',
       })

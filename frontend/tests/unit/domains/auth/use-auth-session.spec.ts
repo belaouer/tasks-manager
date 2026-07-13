@@ -28,14 +28,18 @@ describe('useAuthSession', () => {
 
     await authSession.register({
       email: 'alice@example.com',
+      emailConfirmation: 'alice@example.com',
       password: 'secret123',
+      passwordConfirmation: 'secret123',
       firstName: 'Alice',
       lastName: 'Martin'
     });
 
     expect(authApiMock.register).toHaveBeenCalledWith({
       email: 'alice@example.com',
+      emailConfirmation: 'alice@example.com',
       password: 'secret123',
+      passwordConfirmation: 'secret123',
       firstName: 'Alice',
       lastName: 'Martin'
     });
