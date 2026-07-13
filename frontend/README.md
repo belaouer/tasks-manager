@@ -153,17 +153,6 @@ Niveaux couverts:
 - Integration sync conflicts: verification du retry metier sur erreur 409.
 - Integration write-behind: verification de la file offline et de la synchronisation differee.
 
-## CI Frontend
-
-Le workflow GitHub Actions `frontend-ci` est defini dans `.github/workflows/frontend-ci.yml`.
-
-Il s'execute sur `push` et `pull_request` vers `main` quand des fichiers frontend changent, puis lance:
-
-- `npm ci`
-- `npm run test:unit`
-- `npm run test:integration`
-- `npm run build`
-
 ## Audit Frontend vs Technical Test
 
 Statut global:
