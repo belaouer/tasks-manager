@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test.skip('auth + lists + tasks flow', async ({ page }) => {
+test('auth + lists + tasks flow', async ({ page }) => {
   const lists = [
     {
       id: 'list-1',
@@ -169,8 +169,6 @@ test.skip('auth + lists + tasks flow', async ({ page }) => {
   await page.goto('/dashboard');
 
   await expect(page.getByRole('heading', { name: 'Mes listes' })).toBeVisible();
-
-  await page.getByRole('button', { name: 'Ouvrir' }).first().click();
   await page.getByPlaceholder('Description courte').fill('Tester le flow e2e');
   await page.locator('input[type="date"]').fill('2026-07-20');
   await page.getByRole('button', { name: 'Ajouter la tache' }).click();

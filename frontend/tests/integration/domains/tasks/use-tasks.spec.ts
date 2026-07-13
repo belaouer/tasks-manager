@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTasks } from '~/domains/tasks/application/use-tasks';
+import { useTasksRealtime } from '~/domains/tasks/application/use-tasks-realtime';
 import type {
   CreateTaskPayload,
   TaskSummary
@@ -93,5 +94,91 @@ describe('useTasks integration', () => {
 
     await tasks.deleteTask('list-1', createdTaskId);
     expect(tasks.getTasksForList('list-1').value.find((item) => item.id === createdTaskId)).toBeUndefined();
+  });
+
+  it('applies realtime upsert and delete events into list state', async () => {
+    const api = {
+      getListTasks: vi.fn(async () => []),
+      createTask: vi.fn(),
+      completeTask: vi.fn(),
+      reopenTask: vi.fn(),
+      deleteTask: vi.fn()
+    };
+
+    const tasks = useTasks({
+      getAccessToken: () => 'access-token',
+      tasksApi: api as any
+    });
+
+    await tasks.loadTasks('list-1');
+
+    tasks.upsertTaskFromRealtime(
+      createTask({ id: 'rt-1', listId: 'list-1', shortDescription: 'Realtime task' })
+    );
+    expect(tasks.getTasksForList('list-1').value).toHaveLength(1);
+
+    tasks.deleteTaskFromRealtime({
+      taskId: 'rt-1',
+      listId: 'list-1',
+      ownerUserId: 'user-1'
+    });
+    expect(tasks.getTasksForList('list-1').value).toHaveLength(0);
+  });
+
+  it('subscribes realtime and routes incoming events to handlers', () => {
+    const onTaskUpsert = vi.fn();
+    const onTaskDeleted = vi.fn();
+
+    let registeredHandlers:
+      | {
+          onTaskCreated: (task: TaskSummary) => void;
+          onTaskUpdated: (task: TaskSummary) => void;
+          onTaskCompleted: (task: TaskSummary) => void;
+          onTaskDeleted: (payload: {
+            taskId: string;
+            listId: string;
+            ownerUserId: string;
+          }) => void;
+        }
+      | null = null;
+
+    const realtimeAdapter = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      joinList: vi.fn(),
+      leaveList: vi.fn(),
+      onEvents: vi.fn((handlers) => {
+        registeredHandlers = handlers;
+      }),
+      removeAllListeners: vi.fn()
+    };
+
+    const realtime = useTasksRealtime({
+      getAccessToken: () => 'access-token',
+      realtimeAdapter,
+      onTaskUpsert,
+      onTaskDeleted
+    });
+
+    realtime.subscribeToList('list-1');
+
+    expect(realtimeAdapter.connect).toHaveBeenCalledWith('access-token');
+    expect(realtimeAdapter.joinList).toHaveBeenCalledWith('list-1');
+    expect(registeredHandlers).not.toBeNull();
+
+    registeredHandlers!.onTaskCreated(createTask({ id: 'created' }));
+    registeredHandlers!.onTaskUpdated(createTask({ id: 'updated' }));
+    registeredHandlers!.onTaskCompleted(createTask({ id: 'completed' }));
+    registeredHandlers!.onTaskDeleted({
+      taskId: 'deleted',
+      listId: 'list-1',
+      ownerUserId: 'user-1'
+    });
+
+    expect(onTaskUpsert).toHaveBeenCalledTimes(3);
+    expect(onTaskDeleted).toHaveBeenCalledTimes(1);
+
+    realtime.stop();
+    expect(realtimeAdapter.disconnect).toHaveBeenCalledTimes(1);
   });
 });

@@ -14,8 +14,8 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Dashboard protege par middleware d'authentification.
 - Module Lists frontend en place (lecture/creation/suppression).
 - Module Tasks frontend en place (lecture/creation/completion/reouverture/suppression).
-- Strategie de tests frontend en place: unitaires, integration.
-- E2E Playwright prepare et planifie pour une etape dediee.
+- Temps reel Tasks via WebSocket (Socket.IO) en place.
+- Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
 
@@ -108,16 +108,15 @@ Niveaux couverts:
 
 - Unitaire: helpers du domaine.
 - Integration: use cases/composables avec adapters mockes.
-- E2E: configuration et scenario Playwright prepares, execution differree.
+- E2E: parcours dashboard auth + lists + tasks (Playwright).
 
 ## Prochaine etape
 
-Integrer le temps reel Tasks via WebSocket:
+Ajouter la synchronisation multi-clients et hardening realtime:
 
-- connexion socket authentifiee,
-- souscription rooms par liste,
-- mise a jour UI sur evenements `task:*`,
-- tests de non-regression associes.
+- gestion explicite reconnect/resubscribe,
+- tests e2e multi-onglets,
+- notifications UX de statut socket.
 
 ## Dependance ajoutee a cette etape
 
@@ -149,3 +148,14 @@ Tous les appels Lists utilisent `Authorization: Bearer <accessToken>`.
 - `DELETE /lists/:listId/tasks/:taskId`
 
 Tous les appels Tasks utilisent `Authorization: Bearer <accessToken>`.
+
+## Contrat backend WebSocket Tasks utilise
+
+- Namespace Socket.IO: `/tasks`
+- Auth handshake: token bearer via `auth.token`
+- Rooms: `lists:join` / `lists:leave`
+- Evenements serveur:
+	- `task:created`
+	- `task:updated`
+	- `task:completed`
+	- `task:deleted`
