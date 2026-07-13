@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { CreateTaskPayload, TaskSummary } from '../domain/task-summary';
+import {
+  createInitialPendingMutationSyncState,
+  type PendingMutationSyncState
+} from '~/shared/sync/mutation-sync';
 
 export interface PendingTaskCreateOperation {
   readonly operationId: string;
@@ -27,11 +31,13 @@ export const useTasksStore = defineStore('tasks', () => {
   const isLoading = ref(false);
   const errorMessage = ref('');
   const pendingMutationQueue = ref<readonly PendingTaskMutationOperation[]>([]);
+  const syncState = ref<PendingMutationSyncState>(createInitialPendingMutationSyncState());
 
   return {
     byList,
     isLoading,
     errorMessage,
-    pendingMutationQueue
+    pendingMutationQueue,
+    syncState
   };
 });

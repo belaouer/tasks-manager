@@ -56,6 +56,16 @@
         {{ listsError }}
       </p>
 
+      <p
+        v-if="listsSyncStatusMessage"
+        class="mt-2 rounded-lg border px-3 py-2 text-xs font-semibold"
+        :class="isDarkMode
+          ? 'border-amber-300/30 bg-amber-900/10 text-amber-100'
+          : 'border-amber-200 bg-amber-50 text-amber-800'"
+      >
+        {{ listsSyncStatusMessage }}
+      </p>
+
       <p v-if="listsLoading" class="mt-4 text-sm" :class="mutedClass">
         Chargement des listes...
       </p>
@@ -185,6 +195,16 @@
 
       <p v-if="tasksError" class="mt-4 rounded-lg border px-3 py-2 text-sm" :class="errorClass">
         {{ tasksError }}
+      </p>
+
+      <p
+        v-if="tasksSyncStatusMessage"
+        class="mt-2 rounded-lg border px-3 py-2 text-xs font-semibold"
+        :class="isDarkMode
+          ? 'border-amber-300/30 bg-amber-900/10 text-amber-100'
+          : 'border-amber-200 bg-amber-50 text-amber-800'"
+      >
+        {{ tasksSyncStatusMessage }}
       </p>
 
       <p v-if="tasksLoading" class="mt-4 text-sm" :class="mutedClass">
@@ -477,6 +497,7 @@ const {
   lists,
   isLoading: listsLoading,
   errorMessage: listsError,
+  syncStatusMessage: listsSyncStatusMessage,
   loadLists,
   createList,
   deleteList,
@@ -485,6 +506,7 @@ const {
 const {
   isLoading: tasksLoading,
   errorMessage: tasksError,
+  syncStatusMessage: tasksSyncStatusMessage,
   pendingSyncCount,
   getTasksForList,
   loadTasks,

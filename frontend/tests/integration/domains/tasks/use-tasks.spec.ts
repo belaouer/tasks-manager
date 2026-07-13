@@ -252,6 +252,65 @@ describe('useTasks integration', () => {
     expect(tasks.errorMessage.value).toBe('');
   });
 
+  it('backs off and retries queued task mutations after a transient failure', async () => {
+    vi.useFakeTimers();
+
+    try {
+      let online = false;
+      let createAttempts = 0;
+
+      const createdServerTask = createTask({
+        id: 'server-task-1',
+        pendingSync: undefined
+      });
+
+      const api = {
+        getListTasks: vi.fn(async () => []),
+        createTask: vi.fn(async () => {
+          createAttempts += 1;
+          if (createAttempts === 1) {
+            throw new Error('transient-failure');
+          }
+
+          return createdServerTask;
+        }),
+        completeTask: vi.fn(),
+        reopenTask: vi.fn(),
+        deleteTask: vi.fn()
+      };
+
+      const tasks = useTasks({
+        getAccessToken: () => 'access-token',
+        isOnline: () => online,
+        tasksApi: api as any
+      });
+
+      const queued = await tasks.createTask('list-1', {
+        shortDescription: 'Queued task',
+        longDescription: null,
+        dueDate: '2026-07-26T12:00:00.000Z'
+      });
+
+      expect(queued).toBe(true);
+
+      online = true;
+      await tasks.flushPendingMutations();
+
+      expect(api.createTask).toHaveBeenCalledTimes(1);
+      expect(tasks.pendingSyncCount.value).toBe(1);
+      expect(tasks.errorMessage.value).toBe('Synchronisation des taches en attente: nouvelle tentative dans 2 secondes.');
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(api.createTask).toHaveBeenCalledTimes(2);
+      expect(tasks.pendingSyncCount.value).toBe(0);
+      expect(tasks.errorMessage.value).toBe('');
+      expect(tasks.getTasksForList('list-1').value[0]?.id).toBe('server-task-1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('subscribes realtime and routes incoming events to handlers', () => {
     const onTaskUpsert = vi.fn();
     const onTaskDeleted = vi.fn();

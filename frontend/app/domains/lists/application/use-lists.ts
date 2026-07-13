@@ -8,6 +8,11 @@ import {
   type PendingListMutationOperation,
   useListsStore
 } from '../infrastructure/lists.store';
+import {
+  buildPendingMutationSyncMessage,
+  recordPendingMutationSyncFailure,
+  recordPendingMutationSyncSuccess
+} from '~/shared/sync/mutation-sync';
 
 const listsApi = new HttpListsApiAdapter();
 
@@ -25,9 +30,31 @@ export function useLists(deps: UseListsDependencies = {}) {
   const authSession = useAuthSession();
   const isOnline = deps.isOnline ?? (() => (!import.meta.client ? true : navigator.onLine));
   const listsApiPort = deps.listsApi ?? listsApi;
+  let pendingRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   function resetError(): void {
     store.errorMessage = '';
+  }
+
+  function clearPendingRetryTimer(): void {
+    if (pendingRetryTimer) {
+      clearTimeout(pendingRetryTimer);
+      pendingRetryTimer = null;
+    }
+  }
+
+  function schedulePendingRetry(): void {
+    clearPendingRetryTimer();
+
+    if (store.pendingMutationQueue.length === 0 || store.syncState.nextRetryAt === null) {
+      return;
+    }
+
+    const delayMs = Math.max(0, new Date(store.syncState.nextRetryAt).getTime() - Date.now());
+    pendingRetryTimer = setTimeout(() => {
+      pendingRetryTimer = null;
+      void flushPendingMutations();
+    }, delayMs);
   }
 
   function createPendingList(name: string, createdAt: string, tempListId: string): ListSummary {
@@ -95,6 +122,8 @@ export function useLists(deps: UseListsDependencies = {}) {
   }
 
   async function flushPendingMutations(): Promise<void> {
+    clearPendingRetryTimer();
+
     if (!isOnline() || store.pendingMutationQueue.length === 0) {
       return;
     }
@@ -107,11 +136,22 @@ export function useLists(deps: UseListsDependencies = {}) {
       }
     } catch {
       store.errorMessage = 'Synchronisation en attente: session invalide.';
+      store.syncState = recordPendingMutationSyncFailure(
+        store.syncState,
+        'Session invalide.',
+        false
+      );
       return;
     }
 
     const remainingOperations: PendingListMutationOperation[] = [];
     const createdListIdByTempId = new Map<string, string>();
+    const attemptStartedAt = new Date().toISOString();
+
+    store.syncState = {
+      ...store.syncState,
+      lastAttemptAt: attemptStartedAt
+    };
 
     for (const operation of store.pendingMutationQueue) {
       try {
@@ -148,8 +188,19 @@ export function useLists(deps: UseListsDependencies = {}) {
     store.pendingMutationQueue = remainingOperations;
 
     if (remainingOperations.length > 0) {
-      store.errorMessage = 'Certaines listes restent en attente de synchronisation.';
-    } else if (store.errorMessage.includes('synchronisation')) {
+      store.syncState = recordPendingMutationSyncFailure(
+        store.syncState,
+        'Certaines listes restent en attente de synchronisation.',
+        true
+      );
+      store.errorMessage = buildPendingMutationSyncMessage(
+        'des listes',
+        remainingOperations.length,
+        store.syncState
+      );
+      schedulePendingRetry();
+    } else {
+      store.syncState = recordPendingMutationSyncSuccess(store.syncState);
       store.errorMessage = '';
     }
   }
@@ -246,6 +297,10 @@ export function useLists(deps: UseListsDependencies = {}) {
     lists: computed(() => store.lists),
     isLoading: computed(() => store.isLoading),
     errorMessage: computed(() => store.errorMessage),
+    syncStatusMessage: computed(() =>
+      buildPendingMutationSyncMessage('des listes', store.pendingMutationQueue.length, store.syncState)
+    ),
+    pendingSyncCount: computed(() => store.pendingMutationQueue.length),
     loadLists,
     createList,
     deleteList,
