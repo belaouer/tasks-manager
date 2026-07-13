@@ -161,8 +161,7 @@
         <button
           type="submit"
           class="rounded-xl px-4 py-2 text-sm font-semibold transition"
-          :class="[primaryButtonClass, !isOnline ? disabledButtonClass : '']"
-          :disabled="!isOnline"
+          :class="primaryButtonClass"
         >
           Ajouter la tache
         </button>
@@ -186,6 +185,9 @@
           <div class="flex items-start justify-between gap-3">
             <div>
               <h3 class="text-base font-semibold">{{ task.shortDescription }}</h3>
+              <p v-if="task.pendingSync" class="mt-1 text-xs font-semibold" :class="isDarkMode ? 'text-amber-200' : 'text-amber-700'">
+                En attente de synchronisation
+              </p>
               <p v-if="task.longDescription" class="mt-1 text-sm" :class="mutedClass">{{ task.longDescription }}</p>
               <p class="mt-2 text-xs" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">
                 Echeance: {{ formatDate(task.dueDate) }}
@@ -247,7 +249,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useNetworkStatus } from '~/domains/connectivity/application/use-network-status';
 import { useLists } from '~/domains/lists/application/use-lists';
 import { useTasks } from '~/domains/tasks/application/use-tasks';
@@ -272,8 +274,10 @@ const {
 const {
   isLoading: tasksLoading,
   errorMessage: tasksError,
+  pendingSyncCount,
   getTasksForList,
   loadTasks,
+  flushPendingCreates,
   createTask,
   completeTask,
   reopenTask,
@@ -383,6 +387,10 @@ const realtimeBadgeClass = computed(() => {
 });
 
 const realtimeMetrics = computed(() => [
+  {
+    label: 'Sync en attente',
+    value: String(pendingSyncCount.value)
+  },
   {
     label: 'Reconnexions',
     value: String(realtimeObservability.value.reconnectAttempts)
@@ -507,11 +515,21 @@ async function handleDeleteTask(taskId: string): Promise<void> {
 onMounted(async () => {
   startNetworkTracking();
   await loadLists();
+  await flushPendingCreates();
 
   if (lists.value.length > 0) {
     await selectList(lists.value[0].id);
   }
 });
+
+watch(
+  () => isOnline.value,
+  async (online) => {
+    if (online) {
+      await flushPendingCreates();
+    }
+  }
+);
 
 onUnmounted(() => {
   stopNetworkTracking();
