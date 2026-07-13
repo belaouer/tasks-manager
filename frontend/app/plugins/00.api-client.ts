@@ -13,6 +13,7 @@ function withAuthorizationHeader(headers: HeadersInit | undefined, token: string
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
   const authStore = useAuthStore();
+  const apiBaseUrl = import.meta.server ? config.apiBaseUrl : config.public.apiBaseUrl;
 
   let refreshPromise: Promise<string | null> | null = null;
 
@@ -24,7 +25,7 @@ export default defineNuxtPlugin(() => {
     refreshPromise = (async () => {
       try {
         const response = await $fetch<AccessTokenView>('/auth/refresh', {
-          baseURL: config.public.apiBaseUrl,
+          baseURL: apiBaseUrl,
           method: 'POST',
           credentials: 'include'
         });
@@ -42,7 +43,7 @@ export default defineNuxtPlugin(() => {
   };
 
   const baseApi = $fetch.create({
-    baseURL: config.public.apiBaseUrl,
+    baseURL: apiBaseUrl,
     credentials: 'include',
     onRequest({ request, options }) {
       if (AUTH_ROUTES_PATTERN.test(String(request))) {

@@ -58,7 +58,7 @@ import { useAuthSession } from '~/domains/auth/application/use-auth-session';
 import { useThemeMode } from '~/domains/theme/application/use-theme-mode';
 
 definePageMeta({
-  middleware: []
+  middleware: ['guest']
 });
 
 const router = useRouter();

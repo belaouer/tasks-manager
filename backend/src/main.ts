@@ -5,10 +5,25 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
+function resolveAllowedOrigins(): string[] {
+  const fromEnv = process.env.FRONTEND_ORIGINS ?? 'http://localhost:3001';
+
+  return fromEnv
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.disable('x-powered-by');
+
+  app.enableCors({
+    origin: resolveAllowedOrigins(),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  });
 
   app.use(
     helmet({

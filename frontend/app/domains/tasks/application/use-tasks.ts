@@ -236,10 +236,12 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       try {
         if (operation.kind === 'create') {
           const created = await tasksApi.createTask(token, operation.listId, operation.payload);
-          const currentTasks = readListTasks(operation.listId);
+          const currentTasks = readListTasks(operation.listId).filter(
+            (task) => task.id !== operation.tempTaskId && task.id !== created.id
+          );
           writeListTasks(
             operation.listId,
-            [created, ...currentTasks.filter((task) => task.id !== operation.tempTaskId)]
+            [created, ...currentTasks]
           );
           continue;
         }
@@ -329,7 +331,10 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     try {
       const token = getRequiredToken();
       const created = await tasksApi.createTask(token, listId, payload);
-      writeListTasks(listId, [created, ...readListTasks(listId)]);
+      writeListTasks(
+        listId,
+        [created, ...readListTasks(listId).filter((task) => task.id !== created.id)]
+      );
       return true;
     } catch (error) {
       if (isConflictError(error)) {
@@ -337,7 +342,10 @@ export function useTasks(deps: UseTasksDependencies = {}) {
           const token = getRequiredToken();
           await refreshListFromServer(token, listId);
           const created = await tasksApi.createTask(token, listId, payload);
-          writeListTasks(listId, [created, ...readListTasks(listId)]);
+          writeListTasks(
+            listId,
+            [created, ...readListTasks(listId).filter((task) => task.id !== created.id)]
+          );
           return true;
         } catch {
           store.errorMessage = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
