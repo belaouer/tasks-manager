@@ -115,7 +115,25 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter l'infrastructure Lists (adapters persistence in-memory/typeorm/prisma) sans endpoint HTTP.
+1. Implémenter la couche Presentation Lists (DTO, controller, filter) et ses tests d'intégration.
+
+## Etape réalisée: Infrastructure Lists (Persistence + Services)
+
+Eléments implémentés:
+
+- Module dynamique `ListsPersistenceModule.register({ driver })`.
+- Drivers supportés pour Lists: `in-memory`, `typeorm`, `prisma`.
+- Adapters repository Lists pour chaque driver derrière le port unique `ListsRepositoryPort`.
+- Mapper persistence <-> domaine Lists + store in-memory.
+- Adapters infrastructure de base: `ListsSystemClockAdapter`, `ListsUuidIdGeneratorAdapter`.
+- Branchement complet dans `ListsModule` (use cases injectables via ports abstraits).
+- Modèle Prisma `TaskList` ajouté au schema.
+
+Décisions clés:
+
+- La couche Application Lists reste inchangée: seule l'infrastructure est branchée.
+- Le choix du driver reste transparent pour les use cases grâce au port `ListsRepositoryPort`.
+- Le pattern est aligné sur Auth et Users pour garder une architecture homogène et maintenable.
 
 ## Etape réalisée: Socle métier Lists (Domain + Application)
 
