@@ -115,7 +115,24 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Stabiliser les flux E2E croisés Auth + Users (register -> users/me -> users/:id). 
+1. Préparer la phase Lists (analyse + squelette architectural) sans toucher aux comportements Auth/Users.
+
+## Etape réalisée: Stabilisation E2E croisée Auth + Users
+
+Eléments implémentés:
+
+- Extension du scénario E2E principal vers un flux inter-domaines complet:
+  - `register` Auth,
+  - lecture profil `GET /users/me`,
+  - lecture ciblée `GET /users/:id` pour le propriétaire,
+  - vérification d'interdiction cross-user (`403`).
+- Conservation des scénarios E2E Auth critiques déjà en place (validation register, refresh, logout).
+
+Décisions clés:
+
+- Les tests E2E valident désormais explicitement la cohérence d'identité entre Auth et Users.
+- L'isolation des données utilisateur est vérifiée dans un parcours réel bout en bout.
+- Le flux reste déterministe avec `PERSISTENCE_DRIVER=in-memory` pour une exécution rapide et stable.
 
 ## Etape réalisée: Autorisation Users par identité authentifiée
 
