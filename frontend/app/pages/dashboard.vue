@@ -2,8 +2,8 @@
   <section
     class="grid animate-rise gap-4"
     :class="selectedTask
-      ? 'xl:grid-cols-[minmax(260px,340px)_minmax(0,1fr)_minmax(280px,360px)]'
-      : 'xl:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]'"
+      ? 'lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(260px,340px)_minmax(0,1fr)_minmax(280px,360px)]'
+      : 'lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]'"
   >
     <ListsSidebarPanel
       :is-dark-mode="isDarkMode"
