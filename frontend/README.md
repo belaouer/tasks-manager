@@ -25,6 +25,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Right sidebar detail de tache activee sur selection d'une tache.
 - Modales de confirmation de suppression (liste et tache) implementees.
 - Section dediee Mes taches terminees implementee (repliee par defaut, depliable).
+- Intercepteur HTTP centralise via client API Nuxt: refresh transparent sur 401 + retry + redirection login en cas d'echec refresh.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
@@ -163,7 +164,7 @@ P0 - Critique (alignement direct cahier)
 
 P1 - Important (qualite produit / robustesse)
 
-1. Mettre en place un intercepteur HTTP Nuxt pour refresh transparent centralise et gestion uniforme des 401 (refresh puis redirection login si echec), au lieu d'une logique principalement au bootstrap.
+1. Mettre en place un intercepteur HTTP Nuxt pour refresh transparent centralise et gestion uniforme des 401 (refresh puis redirection login si echec), au lieu d'une logique principalement au bootstrap: fait.
 2. Finaliser le mode offline write-behind pour toutes les mutations (pas seulement creation), avec strategie de retry/exponential backoff et remontes d'etat utilisateur claires.
 3. Renforcer les tests e2e sur les exigences UI du cahier:
 	detail sidebar, section terminees, modales, cas token expire et redirection login.
