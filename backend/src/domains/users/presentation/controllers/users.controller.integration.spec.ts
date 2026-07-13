@@ -42,7 +42,9 @@ describe('UsersController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'users.owner@example.com',
+        emailConfirmation: 'users.owner@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Owner',
         lastName: 'User',
       })
@@ -61,7 +63,9 @@ describe('UsersController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'users.second@example.com',
+        emailConfirmation: 'users.second@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Second',
         lastName: 'User',
       })

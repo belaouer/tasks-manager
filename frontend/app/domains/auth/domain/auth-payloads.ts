@@ -5,7 +5,9 @@ export interface LoginPayload {
 
 export interface RegisterPayload {
   readonly email: string;
+  readonly emailConfirmation: string;
   readonly password: string;
+  readonly passwordConfirmation: string;
   readonly firstName: string;
   readonly lastName: string;
 }

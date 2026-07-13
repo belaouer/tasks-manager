@@ -25,8 +25,18 @@
       </label>
 
       <label class="block text-sm font-semibold sm:col-span-2">
+        Confirmation email
+        <input v-model="form.emailConfirmation" type="email" required class="mt-1 w-full rounded-xl border px-3 py-2" :class="inputClass" autocomplete="email" />
+      </label>
+
+      <label class="block text-sm font-semibold sm:col-span-2">
         Mot de passe
         <input v-model="form.password" type="password" required minlength="8" class="mt-1 w-full rounded-xl border px-3 py-2" :class="inputClass" autocomplete="new-password" />
+      </label>
+
+      <label class="block text-sm font-semibold sm:col-span-2">
+        Confirmation mot de passe
+        <input v-model="form.passwordConfirmation" type="password" required minlength="8" class="mt-1 w-full rounded-xl border px-3 py-2" :class="inputClass" autocomplete="new-password" />
       </label>
 
       <p v-if="errorMessage" class="rounded-lg border px-3 py-2 text-sm sm:col-span-2"
@@ -62,7 +72,9 @@ const { isDarkMode } = useThemeMode();
 
 const form = reactive({
   email: '',
+  emailConfirmation: '',
   password: '',
+  passwordConfirmation: '',
   firstName: '',
   lastName: ''
 });
@@ -77,12 +89,25 @@ const inputClass = computed(() =>
 
 async function onSubmit(): Promise<void> {
   errorMessage.value = '';
+
+  if (form.email !== form.emailConfirmation) {
+    errorMessage.value = 'La confirmation email ne correspond pas.';
+    return;
+  }
+
+  if (form.password !== form.passwordConfirmation) {
+    errorMessage.value = 'La confirmation du mot de passe ne correspond pas.';
+    return;
+  }
+
   isSubmitting.value = true;
 
   try {
     await authSession.register({
       email: form.email,
+      emailConfirmation: form.emailConfirmation,
       password: form.password,
+      passwordConfirmation: form.passwordConfirmation,
       firstName: form.firstName,
       lastName: form.lastName
     });

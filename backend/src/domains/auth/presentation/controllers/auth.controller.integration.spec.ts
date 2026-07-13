@@ -45,7 +45,9 @@ describe('AuthController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'register.integration@example.com',
+        emailConfirmation: 'register.integration@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Register',
         lastName: 'Integration',
       })
@@ -63,7 +65,9 @@ describe('AuthController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'refresh.integration@example.com',
+        emailConfirmation: 'refresh.integration@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Refresh',
         lastName: 'Integration',
       })
@@ -98,7 +102,9 @@ describe('AuthController (integration)', () => {
       .post('/auth/register')
       .send({
         email: 'logout.integration@example.com',
+        emailConfirmation: 'logout.integration@example.com',
         password: 'Password123',
+        passwordConfirmation: 'Password123',
         firstName: 'Logout',
         lastName: 'Integration',
       })
