@@ -3,20 +3,11 @@ import { useAuthSession } from '~/domains/auth/application/use-auth-session';
 import type { CreateTaskPayload, TaskSummary } from '../domain/task-summary';
 import type { TaskDeletedEvent } from '../domain/tasks-realtime-events';
 import { HttpTasksApiAdapter } from '../infrastructure/http-tasks-api.adapter';
-
-const TASKS_STATE_KEY = 'tasks-manager.tasks.by-list';
-const TASKS_LOADING_KEY = 'tasks-manager.tasks.loading';
-const TASKS_ERROR_KEY = 'tasks-manager.tasks.error';
-const TASKS_PENDING_CREATE_QUEUE_KEY = 'tasks-manager.tasks.pending-create-queue';
+import {
+  type PendingTaskCreateOperation,
+  useTasksStore
+} from '../infrastructure/tasks.store';
 const HTTP_CONFLICT_STATUS = 409;
-
-interface PendingTaskCreateOperation {
-  readonly operationId: string;
-  readonly listId: string;
-  readonly tempTaskId: string;
-  readonly payload: CreateTaskPayload;
-  readonly createdAt: string;
-}
 
 interface UseTasksDependencies {
   readonly getAccessToken?: () => string;
@@ -37,13 +28,7 @@ interface UseTasksDependencies {
 const defaultApi = new HttpTasksApiAdapter();
 
 export function useTasks(deps: UseTasksDependencies = {}) {
-  const byList = useState<Record<string, readonly TaskSummary[]>>(TASKS_STATE_KEY, () => ({}));
-  const isLoading = useState<boolean>(TASKS_LOADING_KEY, () => false);
-  const errorMessage = useState<string>(TASKS_ERROR_KEY, () => '');
-  const pendingCreateQueue = useState<readonly PendingTaskCreateOperation[]>(
-    TASKS_PENDING_CREATE_QUEUE_KEY,
-    () => []
-  );
+  const store = useTasksStore();
 
   const getAccessToken =
     deps.getAccessToken ??
@@ -55,16 +40,16 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   const tasksApi = deps.tasksApi ?? defaultApi;
 
   function resetError(): void {
-    errorMessage.value = '';
+    store.errorMessage = '';
   }
 
   function readListTasks(listId: string): readonly TaskSummary[] {
-    return byList.value[listId] ?? [];
+    return store.byList[listId] ?? [];
   }
 
   function writeListTasks(listId: string, tasks: readonly TaskSummary[]): void {
-    byList.value = {
-      ...byList.value,
+    store.byList = {
+      ...store.byList,
       [listId]: tasks
     };
   }
@@ -109,7 +94,7 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       createdAt: timestamp
     };
 
-    pendingCreateQueue.value = [...pendingCreateQueue.value, operation];
+    store.pendingCreateQueue = [...store.pendingCreateQueue, operation];
     return createPendingTask(listId, payload, timestamp, tempTaskId);
   }
 
@@ -135,7 +120,7 @@ export function useTasks(deps: UseTasksDependencies = {}) {
 
   async function refreshListFromServer(accessToken: string, listId: string): Promise<void> {
     const refreshed = await tasksApi.getListTasks(accessToken, listId);
-    const pendingTasks = pendingCreateQueue.value
+    const pendingTasks = store.pendingCreateQueue
       .filter((operation) => operation.listId === listId)
       .map((operation) =>
         createPendingTask(listId, operation.payload, operation.createdAt, operation.tempTaskId)
@@ -145,7 +130,7 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   }
 
   async function flushPendingCreates(): Promise<void> {
-    if (!isOnline() || pendingCreateQueue.value.length === 0) {
+    if (!isOnline() || store.pendingCreateQueue.length === 0) {
       return;
     }
 
@@ -153,13 +138,13 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     try {
       token = getRequiredToken();
     } catch {
-      errorMessage.value = 'Synchronisation en attente: session invalide.';
+      store.errorMessage = 'Synchronisation en attente: session invalide.';
       return;
     }
 
     const remainingOperations: PendingTaskCreateOperation[] = [];
 
-    for (const operation of pendingCreateQueue.value) {
+    for (const operation of store.pendingCreateQueue) {
       try {
         const created = await tasksApi.createTask(token, operation.listId, operation.payload);
         const currentTasks = readListTasks(operation.listId);
@@ -172,12 +157,12 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       }
     }
 
-    pendingCreateQueue.value = remainingOperations;
+    store.pendingCreateQueue = remainingOperations;
 
     if (remainingOperations.length > 0) {
-      errorMessage.value = 'Certaines taches restent en attente de synchronisation.';
-    } else if (errorMessage.value.includes('synchronisation')) {
-      errorMessage.value = '';
+      store.errorMessage = 'Certaines taches restent en attente de synchronisation.';
+    } else if (store.errorMessage.includes('synchronisation')) {
+      store.errorMessage = '';
     }
   }
 
@@ -185,21 +170,21 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: impossible de charger les taches.';
+      store.errorMessage = 'Mode hors ligne: impossible de charger les taches.';
       return;
     }
 
-    isLoading.value = true;
+    store.isLoading = true;
 
     try {
       const token = getRequiredToken();
       const tasks = await tasksApi.getListTasks(token, listId);
       writeListTasks(listId, tasks);
     } catch {
-      errorMessage.value = 'Impossible de charger les taches de la liste.';
+      store.errorMessage = 'Impossible de charger les taches de la liste.';
       writeListTasks(listId, []);
     } finally {
-      isLoading.value = false;
+      store.isLoading = false;
     }
   }
 
@@ -210,14 +195,14 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (payload.shortDescription.trim().length === 0) {
-      errorMessage.value = 'La description courte est obligatoire.';
+      store.errorMessage = 'La description courte est obligatoire.';
       return false;
     }
 
     if (!isOnline()) {
       const pendingTask = enqueuePendingCreate(listId, payload);
       writeListTasks(listId, [pendingTask, ...readListTasks(listId)]);
-      errorMessage.value = 'Mode hors ligne: tache en attente de synchronisation.';
+      store.errorMessage = 'Mode hors ligne: tache en attente de synchronisation.';
       return true;
     }
 
@@ -235,12 +220,12 @@ export function useTasks(deps: UseTasksDependencies = {}) {
           writeListTasks(listId, [created, ...readListTasks(listId)]);
           return true;
         } catch {
-          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          store.errorMessage = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
           return false;
         }
       }
 
-      errorMessage.value = 'Creation de tache impossible.';
+      store.errorMessage = 'Creation de tache impossible.';
       return false;
     }
   }
@@ -275,7 +260,7 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: completion de tache indisponible.';
+      store.errorMessage = 'Mode hors ligne: completion de tache indisponible.';
       return;
     }
 
@@ -292,12 +277,12 @@ export function useTasks(deps: UseTasksDependencies = {}) {
           updateTaskInList(listId, updated);
           return;
         } catch {
-          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          store.errorMessage = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
           return;
         }
       }
 
-      errorMessage.value = 'Impossible de completer cette tache.';
+      store.errorMessage = 'Impossible de completer cette tache.';
     }
   }
 
@@ -305,7 +290,7 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: reouverture de tache indisponible.';
+      store.errorMessage = 'Mode hors ligne: reouverture de tache indisponible.';
       return;
     }
 
@@ -322,12 +307,12 @@ export function useTasks(deps: UseTasksDependencies = {}) {
           updateTaskInList(listId, updated);
           return;
         } catch {
-          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          store.errorMessage = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
           return;
         }
       }
 
-      errorMessage.value = 'Impossible de reouvrir cette tache.';
+      store.errorMessage = 'Impossible de reouvrir cette tache.';
     }
   }
 
@@ -335,7 +320,7 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: suppression de tache indisponible.';
+      store.errorMessage = 'Mode hors ligne: suppression de tache indisponible.';
       return;
     }
 
@@ -358,19 +343,19 @@ export function useTasks(deps: UseTasksDependencies = {}) {
           );
           return;
         } catch {
-          errorMessage.value = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
+          store.errorMessage = 'Conflit de synchronisation detecte. Les taches ont ete rechargees.';
           return;
         }
       }
 
-      errorMessage.value = 'Suppression de tache impossible.';
+      store.errorMessage = 'Suppression de tache impossible.';
     }
   }
 
   return {
-    isLoading: computed(() => isLoading.value),
-    errorMessage: computed(() => errorMessage.value),
-    pendingSyncCount: computed(() => pendingCreateQueue.value.length),
+    isLoading: computed(() => store.isLoading),
+    errorMessage: computed(() => store.errorMessage),
+    pendingSyncCount: computed(() => store.pendingCreateQueue.length),
     getTasksForList: (listId: string) => computed(() => readListTasks(listId)),
     loadTasks,
     flushPendingCreates,

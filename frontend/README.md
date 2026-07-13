@@ -9,6 +9,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Layout global en place.
 - Page d'accueil de fondation frontend.
 - Tailwind CSS active avec UI dark mode par defaut.
+- Pinia active pour la gestion d'etat global frontend.
 - Toggle de theme sombre/clair avec persistence locale.
 - Module Auth frontend en place (register/login/logout/refresh).
 - Dashboard protege par middleware d'authentification.
@@ -140,6 +141,7 @@ Statut global:
 ### Deja couvert cote frontend
 
 - Authentification register/login + bootstrap session au chargement.
+- Etat global auth/listes/taches migre sur Pinia (fondation P0.1).
 - Route protegee via middleware Nuxt.
 - Flux listes/taches principal (creation, suppression, completion, reouverture).
 - Synchronisation temps reel Socket.IO sur les taches.
@@ -149,7 +151,7 @@ Statut global:
 
 P0 - Critique (alignement direct cahier)
 
-1. Implementer Pinia comme store global officiel pour user/listes/taches (cahier explicite), puis brancher le realtime dessus sans re-fetch HTTP en reaction aux evenements socket.
+1. Pinia store global: fait pour auth/listes/taches. Reste a finaliser la migration complete de la couche presentation en composants dedies (TaskCard/TaskForm/Sidebar/TaskDetail) pour supprimer les derniers couplages page-usecase.
 2. Refaire la page principale en 3 zones conformes:
 	left sidebar retractable, main content, right sidebar detail.
 3. Ajouter la right sidebar detail tache sur clic avec infos completes (description courte/longue, dates, statut) et action suppression.
@@ -173,6 +175,7 @@ P2 - Livrable / industrialisation
 ## Dependance ajoutee a cette etape
 
 - `@nuxtjs/tailwindcss` (module Nuxt d'integration Tailwind).
+- `@pinia/nuxt` et `pinia` (etat global frontend).
 
 ## Contrat backend Auth utilise
 

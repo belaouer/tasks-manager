@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { createPinia, setActivePinia } from 'pinia';
 
 const stateStore = new Map<string, Ref<unknown>>();
 
@@ -19,6 +20,9 @@ const stateStore = new Map<string, Ref<unknown>>();
   }
 });
 
+setActivePinia(createPinia());
+
 (globalThis as any).__resetNuxtStateStore = () => {
   stateStore.clear();
+  setActivePinia(createPinia());
 };
