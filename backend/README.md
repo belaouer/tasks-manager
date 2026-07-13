@@ -115,7 +115,31 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter le socle métier Lists (Domain + Application) sans endpoint HTTP.
+1. Implémenter l'infrastructure Lists (adapters persistence in-memory/typeorm/prisma) sans endpoint HTTP.
+
+## Etape réalisée: Socle métier Lists (Domain + Application)
+
+Eléments implémentés:
+
+- Domaine Lists:
+  - Entité `TaskList` (création, rehydratation, renommage).
+  - Value Objects `ListId`, `ListName`, `OwnerUserId`.
+  - Exceptions domaine de validation (`invalid list name/id/owner user id`).
+  - Ports abstraits: `ListsRepositoryPort`, `ListsClockPort`, `ListsIdGeneratorPort`.
+- Application Lists:
+  - Use cases `CreateListUseCase`, `GetUserListsUseCase`, `DeleteListUseCase`.
+  - Commands/DTOs dédiés (`CreateListCommand`, `GetUserListsCommand`, `DeleteListCommand`, `ListSummaryDto`).
+  - Exceptions applicatives (`ListNameAlreadyExistsApplicationException`, `ListNotFoundApplicationException`, `ListAccessDeniedApplicationException`).
+- Tests unitaires Lists:
+  - `create-list.use-case.spec.ts`
+  - `get-user-lists.use-case.spec.ts`
+  - `delete-list.use-case.spec.ts`
+
+Décisions clés:
+
+- Le périmètre reste strictement Domain + Application: aucune dépendance ORM/HTTP ajoutée à cette étape.
+- Les règles critiques sont portées par le domaine (invariants) et l'application (orchestration/autorisations métier).
+- Les tests unitaires valident les scénarios principaux avant l'introduction des adapters de persistence.
 
 ## Etape réalisée: Transition vers le domaine Lists
 
