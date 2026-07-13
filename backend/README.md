@@ -115,7 +115,31 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Ajouter un `docker-compose.yml` backend + PostgreSQL et aligner `.env.example` pour un démarrage local conteneurisé en une commande.
+1. Préparer la finalisation de la branche Docker backend (revue finale + merge vers main).
+
+## Etape réalisée: Docker Compose backend + PostgreSQL
+
+Eléments implémentés:
+
+- Ajout d'un `docker-compose.yml` à la racine du workspace avec:
+  - service `postgres` (PostgreSQL 16 + volume persistant + healthcheck)
+  - service `backend` (build via `backend/Dockerfile`)
+- Configuration des variables backend pour l'exécution conteneurisée:
+  - `PERSISTENCE_DRIVER=prisma`
+  - `DATABASE_URL=postgresql://postgres:postgres@postgres:5432/tasks_manager`
+
+Décisions clés:
+
+- Le compose orchestre backend et base relationnelle dans un même réseau Docker.
+- Le backend attend explicitement que PostgreSQL soit healthy avant démarrage.
+- La persistance PostgreSQL est conservée via volume nommé `postgres_data`.
+
+Commandes Docker Compose:
+
+- Démarrage:
+  - `docker compose up --build`
+- Arrêt:
+  - `docker compose down`
 
 ## Etape réalisée: Dockerisation du backend
 
