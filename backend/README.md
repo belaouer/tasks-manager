@@ -115,7 +115,25 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la finalisation de la branche Lists (revue finale + merge vers main).
+1. Implémenter le socle métier Tasks (Domain + Application) avec tests unitaires des use cases.
+
+## Etape réalisée: Transition vers le domaine Tasks
+
+Eléments implémentés:
+
+- Création du module `TasksModule` sans logique métier.
+- Branchement de `TasksModule` dans la composition racine (`AppModule`).
+- Mise en place de l'arborescence hexagonale complète `src/domains/tasks`:
+  - `domain` (entities, value-objects, services, ports, exceptions, factories)
+  - `application` (dto, use-cases, services)
+  - `infrastructure` (persistence/common/typeorm/prisma, services)
+  - `presentation` (controllers, dto, guards, filters, mappers)
+
+Décisions clés:
+
+- Aucune logique métier Tasks n'est ajoutée à ce jalon pour isoler le changement structurel.
+- Les comportements Auth, Users et Lists restent inchangés.
+- Le squelette Tasks suit exactement les conventions DDD + Hexagonal déjà établies.
 
 ## Etape réalisée: E2E global inter-domaines avec Lists
 
