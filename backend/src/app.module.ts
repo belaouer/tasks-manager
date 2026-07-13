@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './domains/auth/auth.module';
+import { ListsModule } from './domains/lists/lists.module';
 import { UsersModule } from './domains/users/users.module';
 import { envValidationSchema } from './config/env.validation';
 
@@ -16,6 +17,7 @@ import { envValidationSchema } from './config/env.validation';
     }),
     AuthModule,
     UsersModule,
+    ListsModule,
   ],
   controllers: [],
   providers: [],

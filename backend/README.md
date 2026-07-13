@@ -115,7 +115,25 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la phase Lists (analyse + squelette architectural) sans toucher aux comportements Auth/Users.
+1. Implémenter le socle métier Lists (Domain + Application) sans endpoint HTTP.
+
+## Etape réalisée: Transition vers le domaine Lists
+
+Eléments implémentés:
+
+- Création du module `ListsModule` sans logique métier.
+- Branchement de `ListsModule` dans la composition racine (`AppModule`).
+- Mise en place de l'arborescence hexagonale complète `src/domains/lists`:
+  - `domain` (entities, value-objects, services, ports, exceptions, factories)
+  - `application` (dto, use-cases, services)
+  - `infrastructure` (persistence/common/typeorm/prisma, services)
+  - `presentation` (controllers, dto, guards, filters, mappers)
+
+Décisions clés:
+
+- Aucune logique métier Lists n'est ajoutée à ce jalon pour isoler le changement structurel.
+- Les comportements Auth/Users restent inchangés.
+- Le squelette Lists suit exactement les conventions DDD + Hexagonal établies sur Auth et Users.
 
 ## Etape réalisée: Stabilisation E2E croisée Auth + Users
 
