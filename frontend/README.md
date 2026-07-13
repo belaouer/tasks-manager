@@ -12,6 +12,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Toggle de theme sombre/clair avec persistence locale.
 - Module Auth frontend en place (register/login/logout/refresh).
 - Dashboard protege par middleware d'authentification.
+- Module Lists frontend en place (lecture/creation/suppression).
 
 ## Arborescence active
 
@@ -30,6 +31,10 @@ app/
 			application/
 			infrastructure/
 		auth/
+			domain/
+			application/
+			infrastructure/
+		lists/
 			domain/
 			application/
 			infrastructure/
@@ -80,12 +85,12 @@ npm run preview
 
 ## Prochaine etape
 
-Brancher le module Lists frontend:
+Brancher le module Tasks frontend:
 
-- lecture des listes,
-- creation/suppression,
-- integration token bearer,
-- ecran dashboard enrichi.
+- lecture des taches par liste,
+- creation/completion/reouverture/suppression,
+- integration temps reel via WebSocket,
+- UX dashboard orientee workflow.
 
 ## Dependance ajoutee a cette etape
 
@@ -99,3 +104,11 @@ Brancher le module Lists frontend:
 - `POST /auth/logout`
 
 Le refresh token reste gere en cookie `HttpOnly` cote backend. Le frontend conserve uniquement l'access token en etat applicatif.
+
+## Contrat backend Lists utilise
+
+- `GET /lists`
+- `POST /lists`
+- `DELETE /lists/:listId`
+
+Tous les appels Lists utilisent `Authorization: Bearer <accessToken>`.
