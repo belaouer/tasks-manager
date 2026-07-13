@@ -24,6 +24,7 @@ export class UsersProfileProvisioningAdapter extends UserProfileProvisioningPort
           command.email,
           command.firstName,
           command.lastName,
+          command.userId,
         ),
       );
     } catch (error) {

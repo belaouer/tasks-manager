@@ -2,6 +2,7 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
+  ForbiddenException,
   HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -17,6 +18,7 @@ import { InvalidUserNameDomainException } from '../../domain/exceptions/invalid-
   InvalidUserEmailFormatDomainException,
   InvalidUserNameDomainException,
   InvalidUserIdDomainException,
+  ForbiddenException,
 )
 export class UsersExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost): void {
@@ -29,6 +31,11 @@ export class UsersExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof UserNotFoundApplicationException) {
       response.status(HttpStatus.NOT_FOUND).json({ message: exception.message });
+      return;
+    }
+
+    if (exception instanceof ForbiddenException) {
+      response.status(HttpStatus.FORBIDDEN).json({ message: exception.message });
       return;
     }
 

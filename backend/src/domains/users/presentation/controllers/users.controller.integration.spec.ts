@@ -6,6 +6,10 @@ import request from 'supertest';
 
 describe('UsersController (integration)', () => {
   let app: INestApplication;
+  let ownerAccessToken: string;
+  let ownerUserId: string;
+  let secondAccessToken: string;
+  let secondUserId: string;
 
   beforeAll(async () => {
     process.env.PERSISTENCE_DRIVER = 'in-memory';
@@ -31,6 +35,44 @@ describe('UsersController (integration)', () => {
     );
 
     await app.init();
+
+    const ownerRegister = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'users.owner@example.com',
+        password: 'Password123',
+        firstName: 'Owner',
+        lastName: 'User',
+      })
+      .expect(201);
+
+    ownerAccessToken = ownerRegister.body.accessToken as string;
+
+    const ownerProfile = await request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(200);
+
+    ownerUserId = ownerProfile.body.id as string;
+
+    const secondRegister = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'users.second@example.com',
+        password: 'Password123',
+        firstName: 'Second',
+        lastName: 'User',
+      })
+      .expect(201);
+
+    secondAccessToken = secondRegister.body.accessToken as string;
+
+    const secondProfile = await request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', `Bearer ${secondAccessToken}`)
+      .expect(200);
+
+    secondUserId = secondProfile.body.id as string;
   });
 
   afterAll(async () => {
@@ -39,92 +81,59 @@ describe('UsersController (integration)', () => {
     }
   });
 
-  it('creates a user profile and returns it', async () => {
+  it('gets own profile with /users/me', async () => {
     const response = await request(app.getHttpServer())
-      .post('/users')
-      .send({
-        email: 'users.integration@example.com',
-        firstName: 'Users',
-        lastName: 'Integration',
-      })
-      .expect(201);
+      .get('/users/me')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(200);
 
-    expect(typeof response.body.id).toBe('string');
-    expect(response.body.email).toBe('users.integration@example.com');
-    expect(response.body.firstName).toBe('Users');
-    expect(response.body.lastName).toBe('Integration');
+    expect(response.body.id).toBe(ownerUserId);
+    expect(response.body.email).toBe('users.owner@example.com');
+    expect(response.body.firstName).toBe('Owner');
+    expect(response.body.lastName).toBe('User');
+  });
 
+  it('returns 401 when token is missing', async () => {
+    await request(app.getHttpServer()).get('/users/me').expect(401);
+  });
+
+  it('returns 403 when accessing another user profile', async () => {
     await request(app.getHttpServer())
-      .get(`/users/${response.body.id}`)
-      .expect(200)
-      .expect((getResponse) => {
-        expect(getResponse.body.id).toBe(response.body.id);
-        expect(getResponse.body.email).toBe('users.integration@example.com');
-      });
+      .get(`/users/${secondUserId}`)
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(403);
   });
 
-  it('returns 409 when creating a duplicated email', async () => {
-    const payload = {
-      email: 'users.duplicate@example.com',
-      firstName: 'Users',
-      lastName: 'Duplicate',
-    };
-
-    await request(app.getHttpServer()).post('/users').send(payload).expect(201);
-    await request(app.getHttpServer()).post('/users').send(payload).expect(409);
-  });
-
-  it('returns 404 for unknown user id', async () => {
-    await request(app.getHttpServer()).get('/users/unknown-id').expect(404);
-  });
-
-  it('updates user profile names', async () => {
-    const createResponse = await request(app.getHttpServer())
-      .post('/users')
-      .send({
-        email: 'users.update@example.com',
-        firstName: 'Before',
-        lastName: 'Update',
-      })
-      .expect(201);
-
-    const userId = createResponse.body.id as string;
-
+  it('updates own user profile names', async () => {
     const updateResponse = await request(app.getHttpServer())
-      .patch(`/users/${userId}`)
+      .patch(`/users/${ownerUserId}`)
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
       .send({
         firstName: 'After',
         lastName: 'Rename',
       })
       .expect(200);
 
-    expect(updateResponse.body.id).toBe(userId);
+    expect(updateResponse.body.id).toBe(ownerUserId);
     expect(updateResponse.body.firstName).toBe('After');
     expect(updateResponse.body.lastName).toBe('Rename');
   });
 
-  it('returns 404 when updating unknown user profile', async () => {
+  it('returns 403 when updating another user profile', async () => {
     await request(app.getHttpServer())
-      .patch('/users/unknown-id')
+      .patch(`/users/${secondUserId}`)
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
       .send({
         firstName: 'After',
         lastName: 'Rename',
       })
-      .expect(404);
+      .expect(403);
   });
 
   it('returns 400 for invalid update payload', async () => {
-    const createResponse = await request(app.getHttpServer())
-      .post('/users')
-      .send({
-        email: 'users.invalid-update@example.com',
-        firstName: 'Valid',
-        lastName: 'Profile',
-      })
-      .expect(201);
-
     await request(app.getHttpServer())
-      .patch(`/users/${createResponse.body.id as string}`)
+      .patch(`/users/${ownerUserId}`)
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
       .send({
         firstName: 'A',
         lastName: '',
@@ -132,14 +141,25 @@ describe('UsersController (integration)', () => {
       .expect(400);
   });
 
-  it('returns 400 for invalid create payload', async () => {
+  it('returns 400 for invalid /users create payload', async () => {
     await request(app.getHttpServer())
       .post('/users')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
       .send({
-        email: 'not-an-email',
         firstName: 'A',
         lastName: '',
       })
       .expect(400);
+  });
+
+  it('returns 409 when trying to create profile twice for same identity', async () => {
+    await request(app.getHttpServer())
+      .post('/users')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .send({
+        firstName: 'Owner',
+        lastName: 'User',
+      })
+      .expect(409);
   });
 });

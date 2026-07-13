@@ -115,7 +115,25 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Ajouter l'autorisation d'accès Users par identité authentifiée (préparation guard JWT applicatif).
+1. Stabiliser les flux E2E croisés Auth + Users (register -> users/me -> users/:id). 
+
+## Etape réalisée: Autorisation Users par identité authentifiée
+
+Eléments implémentés:
+
+- `UsersJwtAuthGuard` pour valider le bearer access token (`HS256`, issuer, audience).
+- Activation du guard sur `UsersController` et documentation Swagger bearer.
+- Endpoint `GET /users/me` pour récupérer le profil de l'utilisateur authentifié.
+- Contrôle d'appartenance stricte sur `GET /users/:id` et `PATCH /users/:id`.
+- Payload `POST /users` aligné sur l'identité authentifiée (email + userId issus du token).
+- Alignement Auth -> Users provisioning pour partager le même `userId` entre contextes.
+- Tests d'intégration Users étendus: 401 sans token, 403 accès cross-user, lecture/update own profile.
+
+Décisions clés:
+
+- L'isolation par identité est appliquée dans la couche Presentation via un guard dédié.
+- Le domaine/application restent inchangés dans leurs responsabilités métier.
+- L'alignement `userId` Auth/Users garantit la cohérence de l'identité inter-domaines.
 
 ## Etape réalisée: Mise à jour du profil Users (rename)
 

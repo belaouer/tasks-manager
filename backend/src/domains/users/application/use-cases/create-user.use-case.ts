@@ -29,8 +29,12 @@ export class CreateUserUseCase {
       throw new UserAlreadyExistsApplicationException();
     }
 
+    const userId = command.userId
+      ? UserId.create(command.userId)
+      : UserId.create(this.usersIdGenerator.generate());
+
     const user = User.createNew({
-      id: UserId.create(this.usersIdGenerator.generate()),
+      id: userId,
       email,
       firstName,
       lastName,

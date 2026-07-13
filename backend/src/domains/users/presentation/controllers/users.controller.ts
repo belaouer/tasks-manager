@@ -1,16 +1,20 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
   Patch,
   Param,
   Post,
+  Req,
+  UseGuards,
   UseFilters,
 } from '@nestjs/common';
 import {
   ApiBody,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
@@ -28,9 +32,19 @@ import { CreateUserRequestDto } from '../dto/create-user.request.dto';
 import { UpdateUserProfileRequestDto } from '../dto/update-user-profile.request.dto';
 import { UserProfileResponseDto } from '../dto/user-profile.response.dto';
 import { UsersExceptionFilter } from '../filters/users-exception.filter';
+import { UsersJwtAuthGuard } from '../guards/users-jwt-auth.guard';
+
+interface UsersAuthenticatedRequest {
+  readonly user?: {
+    readonly sub: string;
+    readonly email: string;
+  };
+}
 
 @Controller('users')
 @UseFilters(UsersExceptionFilter)
+@UseGuards(UsersJwtAuthGuard)
+@ApiBearerAuth('access-token')
 @ApiTags('Users')
 export class UsersController {
   constructor(
@@ -47,9 +61,40 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'User already exists.' })
   async createUser(
     @Body() body: CreateUserRequestDto,
+    @Req() request: UsersAuthenticatedRequest,
   ): Promise<UserProfileResponseDto> {
+    const user = request.user;
+    if (!user) {
+      throw new ForbiddenException('Authenticated user is required.');
+    }
+
     const profile = await this.createUserUseCase.execute(
-      new CreateUserCommand(body.email, body.firstName, body.lastName),
+      new CreateUserCommand(
+        user.email,
+        body.firstName,
+        body.lastName,
+        user.sub,
+      ),
+    );
+
+    return new UserProfileResponseDto(profile);
+  }
+
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get authenticated user profile.' })
+  @ApiOkResponse({ type: UserProfileResponseDto })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
+  async getMyProfile(
+    @Req() request: UsersAuthenticatedRequest,
+  ): Promise<UserProfileResponseDto> {
+    const authenticatedUserId = request.user?.sub;
+    if (!authenticatedUserId) {
+      throw new ForbiddenException('Authenticated user is required.');
+    }
+
+    const profile = await this.getUserProfileUseCase.execute(
+      new GetUserProfileCommand(authenticatedUserId),
     );
 
     return new UserProfileResponseDto(profile);
@@ -62,7 +107,17 @@ export class UsersController {
   @ApiOkResponse({ type: UserProfileResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid user id.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  async getUserProfile(@Param('id') id: string): Promise<UserProfileResponseDto> {
+  async getUserProfile(
+    @Param('id') id: string,
+    @Req() request: UsersAuthenticatedRequest,
+  ): Promise<UserProfileResponseDto> {
+    const authenticatedUserId = request.user?.sub;
+    if (!authenticatedUserId) {
+      throw new ForbiddenException('Authenticated user is required.');
+    }
+
+    UsersJwtAuthGuard.ensureResourceOwnership(id, authenticatedUserId);
+
     const profile = await this.getUserProfileUseCase.execute(
       new GetUserProfileCommand(id),
     );
@@ -81,7 +136,15 @@ export class UsersController {
   async updateUserProfile(
     @Param('id') id: string,
     @Body() body: UpdateUserProfileRequestDto,
+    @Req() request: UsersAuthenticatedRequest,
   ): Promise<UserProfileResponseDto> {
+    const authenticatedUserId = request.user?.sub;
+    if (!authenticatedUserId) {
+      throw new ForbiddenException('Authenticated user is required.');
+    }
+
+    UsersJwtAuthGuard.ensureResourceOwnership(id, authenticatedUserId);
+
     const profile = await this.updateUserProfileUseCase.execute(
       new UpdateUserProfileCommand(id, body.firstName, body.lastName),
     );
