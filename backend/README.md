@@ -115,7 +115,38 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter la couche Presentation Tasks (DTO, controller, filter) et ses tests d'intégration.
+1. Mettre à jour les tests E2E globaux pour couvrir le flux complet Tasks (create/complete/delete).
+
+## Etape réalisée: Presentation Tasks + tests d'intégration
+
+Eléments implémentés:
+
+- `TasksController` avec endpoints:
+  - `POST /lists/:listId/tasks` (création d'une tâche)
+  - `GET /lists/:listId/tasks` (lecture des tâches de la liste)
+  - `PATCH /lists/:listId/tasks/:taskId/complete` (marquage terminée)
+  - `PATCH /lists/:listId/tasks/:taskId/reopen` (réouverture)
+  - `DELETE /lists/:listId/tasks/:taskId` (suppression)
+- DTO Presentation:
+  - `CreateTaskRequestDto`
+  - `TaskSummaryResponseDto`
+- `TasksJwtAuthGuard` pour valider le bearer access token (`HS256`, issuer, audience).
+- `TasksExceptionFilter` pour mapper exceptions application/domaine Tasks vers des réponses HTTP cohérentes.
+- Tests d'intégration `tasks.controller.integration.spec.ts` couvrant:
+  - création,
+  - validation payload (400),
+  - authentification manquante (401),
+  - isolation entre utilisateurs/listes,
+  - completion/réouverture,
+  - accès cross-user interdit (403),
+  - suppression propriétaire (204),
+  - suppression d'une tâche inexistante (404).
+
+Décisions clés:
+
+- Les routes Tasks sont imbriquées sous `lists/:listId` pour expliciter le contexte de liste au niveau API.
+- La sécurité d'accès Tasks est portée par la couche Presentation (guard JWT), sans fuite de dépendances techniques vers le domaine.
+- Le mapping d'erreurs est centralisé dans un filter dédié pour garantir un contrat API stable et maintenable.
 
 ## Etape réalisée: Infrastructure Tasks (Persistence + Services)
 
