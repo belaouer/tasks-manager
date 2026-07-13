@@ -125,7 +125,7 @@ describe('useTasks integration', () => {
     expect(tasks.getTasksForList('list-1').value).toHaveLength(0);
   });
 
-  it('blocks tasks operations while offline', async () => {
+  it('queues task mutations while offline and applies them optimistically', async () => {
     const api = {
       getListTasks: vi.fn(async () => []),
       createTask: vi.fn(),
@@ -134,15 +134,19 @@ describe('useTasks integration', () => {
       deleteTask: vi.fn()
     };
 
+    const initialTask = createTask({ id: 'task-1' });
+
     const tasks = useTasks({
       getAccessToken: () => 'access-token',
+      tasksApi: api as any,
       isOnline: () => false,
-      tasksApi: api as any
     });
 
     await tasks.loadTasks('list-1');
     expect(tasks.errorMessage.value).toBe('Mode hors ligne: impossible de charger les taches.');
     expect(api.getListTasks).not.toHaveBeenCalled();
+
+    tasks.upsertTaskFromRealtime(initialTask);
 
     const created = await tasks.createTask('list-1', {
       shortDescription: 'Offline task',
@@ -156,29 +160,33 @@ describe('useTasks integration', () => {
     expect(tasks.getTasksForList('list-1').value[0]?.pendingSync).toBe(true);
 
     await tasks.completeTask('list-1', 'task-1');
-    expect(tasks.errorMessage.value).toBe('Mode hors ligne: completion de tache indisponible.');
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: completion de tache en attente de synchronisation.');
     expect(api.completeTask).not.toHaveBeenCalled();
+    expect(tasks.getTasksForList('list-1').value.find((item) => item.id === 'task-1')?.completedAt).not.toBeNull();
 
     await tasks.reopenTask('list-1', 'task-1');
-    expect(tasks.errorMessage.value).toBe('Mode hors ligne: reouverture de tache indisponible.');
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: reouverture de tache en attente de synchronisation.');
     expect(api.reopenTask).not.toHaveBeenCalled();
+    expect(tasks.getTasksForList('list-1').value.find((item) => item.id === 'task-1')?.completedAt).toBeNull();
 
     await tasks.deleteTask('list-1', 'task-1');
-    expect(tasks.errorMessage.value).toBe('Mode hors ligne: suppression de tache indisponible.');
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: suppression de tache en attente de synchronisation.');
     expect(api.deleteTask).not.toHaveBeenCalled();
+    expect(tasks.getTasksForList('list-1').value.find((item) => item.id === 'task-1')).toBeUndefined();
   });
 
-  it('flushes offline queued creates when connection is back', async () => {
+  it('flushes offline queued task mutations when connection is back', async () => {
     const createdServerTask = createTask({ id: 'server-task-1', pendingSync: undefined });
+    const completedServerTask = createTask({ id: 'server-task-2' });
 
     let online = false;
 
     const api = {
-      getListTasks: vi.fn(async () => []),
+      getListTasks: vi.fn(async () => [completedServerTask]),
       createTask: vi.fn(async () => createdServerTask),
-      completeTask: vi.fn(),
-      reopenTask: vi.fn(),
-      deleteTask: vi.fn()
+      completeTask: vi.fn(async () => ({ ...completedServerTask, completedAt: '2026-07-13T10:00:00.000Z' })),
+      reopenTask: vi.fn(async () => ({ ...completedServerTask, completedAt: null })),
+      deleteTask: vi.fn(async () => undefined)
     };
 
     const tasks = useTasks({
@@ -196,13 +204,22 @@ describe('useTasks integration', () => {
     expect(queued).toBe(true);
     expect(tasks.pendingSyncCount.value).toBe(1);
 
+    tasks.upsertTaskFromRealtime(completedServerTask);
+    await tasks.completeTask('list-1', 'task-1');
+    await tasks.reopenTask('list-1', 'task-1');
+    await tasks.deleteTask('list-1', 'task-1');
+    expect(tasks.pendingSyncCount.value).toBe(4);
+
     online = true;
-    await tasks.flushPendingCreates();
+    await tasks.flushPendingMutations();
 
     expect(tasks.pendingSyncCount.value).toBe(0);
     expect(api.createTask).toHaveBeenCalledTimes(1);
+    expect(api.completeTask).toHaveBeenCalledTimes(1);
+    expect(api.reopenTask).toHaveBeenCalledTimes(1);
+    expect(api.deleteTask).toHaveBeenCalledTimes(1);
     expect(tasks.getTasksForList('list-1').value[0]?.id).toBe('server-task-1');
-    expect(tasks.getTasksForList('list-1').value[0]?.pendingSync).toBeUndefined();
+    expect(tasks.getTasksForList('list-1').value.find((item) => item.id === 'task-1')).toBeUndefined();
   });
 
   it('retries completeTask once after synchronization conflict', async () => {

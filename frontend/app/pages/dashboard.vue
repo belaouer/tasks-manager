@@ -484,7 +484,7 @@ const {
   pendingSyncCount,
   getTasksForList,
   loadTasks,
-  flushPendingCreates,
+  flushPendingMutations,
   createTask,
   completeTask,
   reopenTask,
@@ -796,7 +796,7 @@ async function handleDeleteTask(taskId: string): Promise<void> {
 onMounted(async () => {
   startNetworkTracking();
   await loadLists();
-  await flushPendingCreates();
+  await flushPendingMutations();
 
   if (lists.value.length > 0) {
     await selectList(lists.value[0].id);
@@ -807,7 +807,7 @@ watch(
   () => isOnline.value,
   async (online) => {
     if (online) {
-      await flushPendingCreates();
+      await flushPendingMutations();
     }
   }
 );

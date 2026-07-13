@@ -5,6 +5,7 @@ import type { TaskDeletedEvent } from '../domain/tasks-realtime-events';
 import { HttpTasksApiAdapter } from '../infrastructure/http-tasks-api.adapter';
 import {
   type PendingTaskCreateOperation,
+  type PendingTaskMutationOperation,
   useTasksStore
 } from '../infrastructure/tasks.store';
 const HTTP_CONFLICT_STATUS = 409;
@@ -88,14 +89,31 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     const tempTaskId = `pending-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
     const operation: PendingTaskCreateOperation = {
       operationId: `op-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+      kind: 'create',
       listId,
       tempTaskId,
       payload,
       createdAt: timestamp
     };
 
-    store.pendingCreateQueue = [...store.pendingCreateQueue, operation];
+    store.pendingMutationQueue = [...store.pendingMutationQueue, operation];
     return createPendingTask(listId, payload, timestamp, tempTaskId);
+  }
+
+  function enqueuePendingStatusMutation(
+    kind: 'complete' | 'reopen' | 'delete',
+    listId: string,
+    taskId: string
+  ): PendingTaskMutationOperation {
+    const operation: PendingTaskMutationOperation = {
+      operationId: `op-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+      kind,
+      listId,
+      taskId
+    };
+
+    store.pendingMutationQueue = [...store.pendingMutationQueue, operation];
+    return operation;
   }
 
   function isConflictError(error: unknown): boolean {
@@ -120,8 +138,11 @@ export function useTasks(deps: UseTasksDependencies = {}) {
 
   async function refreshListFromServer(accessToken: string, listId: string): Promise<void> {
     const refreshed = await tasksApi.getListTasks(accessToken, listId);
-    const pendingTasks = store.pendingCreateQueue
-      .filter((operation) => operation.listId === listId)
+    const pendingTasks = store.pendingMutationQueue
+      .filter(
+        (operation): operation is PendingTaskCreateOperation =>
+          operation.kind === 'create' && operation.listId === listId
+      )
       .map((operation) =>
         createPendingTask(listId, operation.payload, operation.createdAt, operation.tempTaskId)
       );
@@ -129,8 +150,35 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     writeListTasks(listId, [...pendingTasks, ...refreshed]);
   }
 
-  async function flushPendingCreates(): Promise<void> {
-    if (!isOnline() || store.pendingCreateQueue.length === 0) {
+  function applyOptimisticStatusMutation(
+    kind: 'complete' | 'reopen' | 'delete',
+    listId: string,
+    taskId: string
+  ): void {
+    if (kind === 'delete') {
+      writeListTasks(
+        listId,
+        readListTasks(listId).filter((task) => task.id !== taskId)
+      );
+      return;
+    }
+
+    writeListTasks(
+      listId,
+      readListTasks(listId).map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              completedAt: kind === 'complete' ? task.completedAt ?? new Date().toISOString() : null,
+              pendingSync: true
+            }
+          : task
+      )
+    );
+  }
+
+  async function flushPendingMutations(): Promise<void> {
+    if (!isOnline() || store.pendingMutationQueue.length === 0) {
       return;
     }
 
@@ -144,20 +192,41 @@ export function useTasks(deps: UseTasksDependencies = {}) {
 
     const remainingOperations: PendingTaskCreateOperation[] = [];
 
-    for (const operation of store.pendingCreateQueue) {
+    for (const operation of store.pendingMutationQueue) {
       try {
-        const created = await tasksApi.createTask(token, operation.listId, operation.payload);
-        const currentTasks = readListTasks(operation.listId);
+        if (operation.kind === 'create') {
+          const created = await tasksApi.createTask(token, operation.listId, operation.payload);
+          const currentTasks = readListTasks(operation.listId);
+          writeListTasks(
+            operation.listId,
+            [created, ...currentTasks.filter((task) => task.id !== operation.tempTaskId)]
+          );
+          continue;
+        }
+
+        if (operation.kind === 'complete') {
+          const updated = await tasksApi.completeTask(token, operation.listId, operation.taskId);
+          updateTaskInList(operation.listId, updated);
+          continue;
+        }
+
+        if (operation.kind === 'reopen') {
+          const updated = await tasksApi.reopenTask(token, operation.listId, operation.taskId);
+          updateTaskInList(operation.listId, updated);
+          continue;
+        }
+
+        await tasksApi.deleteTask(token, operation.listId, operation.taskId);
         writeListTasks(
           operation.listId,
-          [created, ...currentTasks.filter((task) => task.id !== operation.tempTaskId)]
+          readListTasks(operation.listId).filter((task) => task.id !== operation.taskId)
         );
       } catch {
         remainingOperations.push(operation);
       }
     }
 
-    store.pendingCreateQueue = remainingOperations;
+    store.pendingMutationQueue = remainingOperations;
 
     if (remainingOperations.length > 0) {
       store.errorMessage = 'Certaines taches restent en attente de synchronisation.';
@@ -260,7 +329,9 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      store.errorMessage = 'Mode hors ligne: completion de tache indisponible.';
+      enqueuePendingStatusMutation('complete', listId, taskId);
+      applyOptimisticStatusMutation('complete', listId, taskId);
+      store.errorMessage = 'Mode hors ligne: completion de tache en attente de synchronisation.';
       return;
     }
 
@@ -290,7 +361,9 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      store.errorMessage = 'Mode hors ligne: reouverture de tache indisponible.';
+      enqueuePendingStatusMutation('reopen', listId, taskId);
+      applyOptimisticStatusMutation('reopen', listId, taskId);
+      store.errorMessage = 'Mode hors ligne: reouverture de tache en attente de synchronisation.';
       return;
     }
 
@@ -320,7 +393,9 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      store.errorMessage = 'Mode hors ligne: suppression de tache indisponible.';
+      enqueuePendingStatusMutation('delete', listId, taskId);
+      applyOptimisticStatusMutation('delete', listId, taskId);
+      store.errorMessage = 'Mode hors ligne: suppression de tache en attente de synchronisation.';
       return;
     }
 
@@ -355,10 +430,10 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   return {
     isLoading: computed(() => store.isLoading),
     errorMessage: computed(() => store.errorMessage),
-    pendingSyncCount: computed(() => store.pendingCreateQueue.length),
+    pendingSyncCount: computed(() => store.pendingMutationQueue.length),
     getTasksForList: (listId: string) => computed(() => readListTasks(listId)),
     loadTasks,
-    flushPendingCreates,
+    flushPendingMutations,
     createTask,
     completeTask,
     reopenTask,
