@@ -91,9 +91,10 @@
                 :class="isDarkMode
                   ? 'border-rose-400/40 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30'
                   : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
+                aria-label="Supprimer la liste"
                 :disabled="!isOnline"
                 :aria-disabled="!isOnline"
-                @click="handleDeleteList(list.id)"
+                @click="requestDeleteList(list.id, list.name)"
               >
                 Supprimer
               </button>
@@ -250,8 +251,9 @@
               type="button"
               class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
               :class="isDarkMode ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
+              aria-label="Supprimer la tache"
               :disabled="!isOnline"
-              @click="handleDeleteTask(task.id)"
+              @click="requestDeleteTask(task.id, task.shortDescription)"
             >
               Supprimer
             </button>
@@ -315,11 +317,57 @@
         class="mt-5 rounded-xl border px-4 py-2 text-sm font-semibold transition"
         :class="isDarkMode ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
         :disabled="!isOnline"
-        @click="handleDeleteTask(selectedTask.id)"
+        @click="requestDeleteTask(selectedTask.id, selectedTask.shortDescription)"
       >
         Supprimer la tache
       </button>
     </article>
+
+    <div
+      v-if="deleteConfirmation"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <article
+        class="w-full max-w-md rounded-2xl border p-6 shadow-shell"
+        :class="isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'"
+      >
+        <h3 class="font-display text-2xl font-bold">Confirmer la suppression</h3>
+        <p class="mt-3 text-sm leading-7" :class="mutedClass">
+          {{ deleteConfirmation.kind === 'list'
+            ? `Tu vas supprimer la liste \"${deleteConfirmation.label}\" et toutes ses taches.`
+            : `Tu vas supprimer la tache \"${deleteConfirmation.label}\".` }}
+        </p>
+        <p class="mt-2 text-xs font-semibold uppercase tracking-wide" :class="isDarkMode ? 'text-rose-200' : 'text-rose-700'">
+          Cette action est irreversible.
+        </p>
+
+        <div class="mt-5 flex justify-end gap-3">
+          <button
+            type="button"
+            class="rounded-lg border px-4 py-2 text-sm font-semibold transition"
+            :class="isDarkMode
+              ? 'border-slate-600 bg-slate-950/50 text-slate-100 hover:bg-slate-800'
+              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'"
+            @click="closeDeleteConfirmation"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="rounded-lg border px-4 py-2 text-sm font-semibold transition"
+            :class="isDarkMode
+              ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30'
+              : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
+            :disabled="!isOnline"
+            @click="confirmDelete"
+          >
+            Confirmer la suppression
+          </button>
+        </div>
+      </article>
+    </div>
   </section>
 </template>
 
@@ -374,6 +422,11 @@ const listName = ref('');
 const selectedListId = ref('');
 const selectedTaskId = ref('');
 const isLeftSidebarCollapsed = ref(false);
+const deleteConfirmation = ref<{
+  kind: 'list' | 'task';
+  id: string;
+  label: string;
+} | null>(null);
 const taskForm = ref({
   shortDescription: '',
   longDescription: '',
@@ -552,6 +605,42 @@ function toggleLeftSidebar(): void {
 
 function openTaskDetails(taskId: string): void {
   selectedTaskId.value = taskId;
+}
+
+function requestDeleteList(listId: string, listNameLabel: string): void {
+  deleteConfirmation.value = {
+    kind: 'list',
+    id: listId,
+    label: listNameLabel
+  };
+}
+
+function requestDeleteTask(taskId: string, taskLabel: string): void {
+  deleteConfirmation.value = {
+    kind: 'task',
+    id: taskId,
+    label: taskLabel
+  };
+}
+
+function closeDeleteConfirmation(): void {
+  deleteConfirmation.value = null;
+}
+
+async function confirmDelete(): Promise<void> {
+  if (!deleteConfirmation.value) {
+    return;
+  }
+
+  const target = deleteConfirmation.value;
+  closeDeleteConfirmation();
+
+  if (target.kind === 'list') {
+    await handleDeleteList(target.id);
+    return;
+  }
+
+  await handleDeleteTask(target.id);
 }
 
 async function handleCreateTask(): Promise<void> {
