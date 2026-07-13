@@ -5,6 +5,14 @@
       :class="isDarkMode ? 'border-slate-700 bg-slate-900/65' : 'border-white/80 bg-white/75'"
     >
       <h1 class="font-display text-4xl font-bold">Mes listes</h1>
+      <div class="mt-3">
+        <span
+          class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase"
+          :class="networkBadgeClass"
+        >
+          Reseau: {{ networkStatusLabel }}
+        </span>
+      </div>
       <p class="mt-3 text-sm leading-7" :class="isDarkMode ? 'text-slate-300' : 'text-slate-600'">
         Cree, consulte et supprime tes listes.
       </p>
@@ -21,7 +29,8 @@
         <button
           type="submit"
           class="rounded-xl px-4 py-2 text-sm font-semibold transition"
-          :class="primaryButtonClass"
+          :class="[primaryButtonClass, !isOnline ? disabledButtonClass : '']"
+          :disabled="!isOnline"
         >
           Ajouter
         </button>
@@ -70,6 +79,8 @@
                 :class="isDarkMode
                   ? 'border-rose-400/40 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30'
                   : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
+                :disabled="!isOnline"
+                :aria-disabled="!isOnline"
                 @click="handleDeleteList(list.id)"
               >
                 Supprimer
@@ -150,7 +161,8 @@
         <button
           type="submit"
           class="rounded-xl px-4 py-2 text-sm font-semibold transition"
-          :class="primaryButtonClass"
+          :class="[primaryButtonClass, !isOnline ? disabledButtonClass : '']"
+          :disabled="!isOnline"
         >
           Ajouter la tache
         </button>
@@ -195,6 +207,7 @@
               type="button"
               class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
               :class="isDarkMode ? 'border-emerald-300/50 bg-emerald-900/20 text-emerald-100 hover:bg-emerald-900/30' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'"
+              :disabled="!isOnline"
               @click="handleCompleteTask(task.id)"
             >
               Completer
@@ -204,6 +217,7 @@
               type="button"
               class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
               :class="isDarkMode ? 'border-amber-300/50 bg-amber-900/20 text-amber-100 hover:bg-amber-900/30' : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'"
+              :disabled="!isOnline"
               @click="handleReopenTask(task.id)"
             >
               Reouvrir
@@ -212,6 +226,7 @@
               type="button"
               class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
               :class="isDarkMode ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
+              :disabled="!isOnline"
               @click="handleDeleteTask(task.id)"
             >
               Supprimer
@@ -233,6 +248,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useNetworkStatus } from '~/domains/connectivity/application/use-network-status';
 import { useLists } from '~/domains/lists/application/use-lists';
 import { useTasks } from '~/domains/tasks/application/use-tasks';
 import { useTasksRealtime } from '~/domains/tasks/application/use-tasks-realtime';
@@ -244,6 +260,7 @@ definePageMeta({
 });
 
 const { isDarkMode } = useThemeMode();
+const { isOnline, startTracking: startNetworkTracking, stopTracking: stopNetworkTracking } = useNetworkStatus();
 const {
   lists,
   isLoading: listsLoading,
@@ -303,6 +320,26 @@ const primaryButtonClass = computed(() =>
     ? 'bg-cyan-400/20 text-cyan-200 ring-1 ring-cyan-300/40 hover:bg-cyan-400/30'
     : 'bg-slate-900 text-slate-100 hover:bg-slate-800'
 );
+
+const disabledButtonClass = computed(() =>
+  isDarkMode.value
+    ? 'cursor-not-allowed opacity-45'
+    : 'cursor-not-allowed opacity-60'
+);
+
+const networkStatusLabel = computed(() => (isOnline.value ? 'en ligne' : 'hors ligne'));
+
+const networkBadgeClass = computed(() => {
+  if (isOnline.value) {
+    return isDarkMode.value
+      ? 'border-emerald-300/50 bg-emerald-900/20 text-emerald-100'
+      : 'border-emerald-400 bg-emerald-50 text-emerald-700';
+  }
+
+  return isDarkMode.value
+    ? 'border-rose-300/50 bg-rose-900/20 text-rose-100'
+    : 'border-rose-300 bg-rose-50 text-rose-700';
+});
 
 const realtimeStatusLabel = computed(() => {
   switch (realtimeStatus.value) {
@@ -468,6 +505,7 @@ async function handleDeleteTask(taskId: string): Promise<void> {
 }
 
 onMounted(async () => {
+  startNetworkTracking();
   await loadLists();
 
   if (lists.value.length > 0) {
@@ -476,6 +514,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  stopNetworkTracking();
   stopRealtime();
 });
 </script>

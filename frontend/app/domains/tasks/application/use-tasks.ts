@@ -10,6 +10,7 @@ const TASKS_ERROR_KEY = 'tasks-manager.tasks.error';
 
 interface UseTasksDependencies {
   readonly getAccessToken?: () => string;
+  readonly isOnline?: () => boolean;
   readonly tasksApi?: {
     getListTasks(accessToken: string, listId: string): Promise<readonly TaskSummary[]>;
     createTask(
@@ -36,6 +37,7 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       const authSession = useAuthSession();
       return authSession.accessToken.value;
     });
+  const isOnline = deps.isOnline ?? (() => (!import.meta.client ? true : navigator.onLine));
   const tasksApi = deps.tasksApi ?? defaultApi;
 
   function resetError(): void {
@@ -64,6 +66,12 @@ export function useTasks(deps: UseTasksDependencies = {}) {
 
   async function loadTasks(listId: string): Promise<void> {
     resetError();
+
+    if (!isOnline()) {
+      errorMessage.value = 'Mode hors ligne: impossible de charger les taches.';
+      return;
+    }
+
     isLoading.value = true;
 
     try {
@@ -83,6 +91,11 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     payload: CreateTaskPayload
   ): Promise<boolean> {
     resetError();
+
+    if (!isOnline()) {
+      errorMessage.value = 'Mode hors ligne: creation de tache indisponible.';
+      return false;
+    }
 
     if (payload.shortDescription.trim().length === 0) {
       errorMessage.value = 'La description courte est obligatoire.';
@@ -129,6 +142,11 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   async function completeTask(listId: string, taskId: string): Promise<void> {
     resetError();
 
+    if (!isOnline()) {
+      errorMessage.value = 'Mode hors ligne: completion de tache indisponible.';
+      return;
+    }
+
     try {
       const token = getRequiredToken();
       const updated = await tasksApi.completeTask(token, listId, taskId);
@@ -141,6 +159,11 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   async function reopenTask(listId: string, taskId: string): Promise<void> {
     resetError();
 
+    if (!isOnline()) {
+      errorMessage.value = 'Mode hors ligne: reouverture de tache indisponible.';
+      return;
+    }
+
     try {
       const token = getRequiredToken();
       const updated = await tasksApi.reopenTask(token, listId, taskId);
@@ -152,6 +175,11 @@ export function useTasks(deps: UseTasksDependencies = {}) {
 
   async function deleteTask(listId: string, taskId: string): Promise<void> {
     resetError();
+
+    if (!isOnline()) {
+      errorMessage.value = 'Mode hors ligne: suppression de tache indisponible.';
+      return;
+    }
 
     try {
       const token = getRequiredToken();
