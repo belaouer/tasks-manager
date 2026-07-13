@@ -1,224 +1,139 @@
-# Frontend - Tasks Manager (Nuxt 4)
+﻿# Frontend - Tasks Manager (Nuxt 4)
 
 [![frontend-ci](https://github.com/belaouer/tasks-manager/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/belaouer/tasks-manager/actions/workflows/frontend-ci.yml)
 
-Ce frontend est la couche presentation du projet Tasks Manager.
-Il demarre par une fondation UI claire, responsive et maintenable, avant integration progressive des flux metier.
+Frontend du projet Tasks Manager, construit avec Nuxt 4, Vue 3, Pinia et Tailwind CSS.
 
-## Etat actuel
+## Objectif du frontend
 
-- Socle Nuxt 4 operationnel.
-- Layout global en place.
-- Page d'accueil de fondation frontend.
-- Tailwind CSS active avec UI dark mode par defaut.
-- Pinia active pour la gestion d'etat global frontend.
-- Toggle de theme sombre/clair avec persistence locale.
-- Module Auth frontend en place (register/login/logout/refresh).
-- Formulaire d'inscription complet avec confirmation email + confirmation mot de passe.
-- Dashboard protege par middleware d'authentification.
-- Module Lists frontend en place (lecture/creation/suppression).
-- Module Tasks frontend en place (lecture/creation/completion/reouverture/suppression).
-- Temps reel Tasks via WebSocket (Socket.IO) en place.
-- Hardening realtime: reconnect/resubscribe et statut socket visible en UI.
-- Observabilite realtime: metriques de reconnexion + horodatages de sante socket.
-- Fondations offline-first UX: statut reseau frontend + garde-fous sur ecritures hors ligne.
-- Retries metier sur conflits de synchronisation pour les mutations Tasks.
-- File locale write-behind pour les mutations Tasks hors ligne (creation, completion, reouverture, suppression) + flush auto au retour reseau.
-- File locale write-behind pour les mutations Lists hors ligne (creation, suppression) + flush auto au retour reseau.
-- Dashboard restructure en 3 zones (left/main/right) avec left sidebar retractable.
-- Right sidebar detail de tache activee sur selection d'une tache.
-- Modales de confirmation de suppression (liste et tache) implementees.
-- Section dediee Mes taches terminees implementee (repliee par defaut, depliable).
-- Couche presentation decomposee en composants par domaine (`components/domains/*`) + composants mutualises (`components/shared/*`).
-- Intercepteur HTTP centralise via client API Nuxt: refresh transparent sur 401 + retry + redirection login en cas d'echec refresh.
-- Strategie de tests frontend en place: unitaires, integration et e2e.
-- Hardening de la synchro offline: retry differe avec backoff exponentiel et messages d'etat plus riches pour les files Lists/Tasks.
+Fournir une couche presentation claire et robuste, alignee avec une approche DDD frontend:
 
-## Arborescence active
+- UI dans pages/layouts/components
+- logique metier dans domains
+- infrastructure HTTP/WebSocket isolee
+- etat global via stores/composables Pinia
+
+## Perimetre fonctionnel
+
+Fonctionnalites couvertes:
+
+- Auth complete (register/login/logout/refresh)
+- protection des routes (`authenticated`, `guest`)
+- dashboard principal lists + tasks
+- details de tache dans panneau dedie
+- modales de confirmation de suppression
+- section taches terminees repliable
+- synchronisation temps reel Socket.IO
+- robustesse offline-first:
+  - detection statut reseau
+  - write-behind local
+  - flush auto au retour reseau
+  - retry avec backoff
+
+## Architecture frontend
 
 ```text
-app/
-	app.vue
-	assets/
-		css/
-			main.css
-	domains/
-		landing/
-			domain/
-			application/
-		theme/
-			domain/
-			application/
-			infrastructure/
-		auth/
-			domain/
-			application/
-			infrastructure/
-		lists/
-			domain/
-			application/
-			infrastructure/
-		tasks/
-			domain/
-			application/
-			infrastructure/
-		connectivity/
-			domain/
-			application/
-			infrastructure/
-		components/
-			domains/
-				lists/
-				tasks/
-			shared/
-	layouts/
-		default.vue
-	pages/
-		index.vue
-		auth/
-			login.vue
-			register.vue
-		dashboard.vue
-middleware/
-	authenticated.ts
-plugins/
-	auth-bootstrap.client.ts
-tests/
-	unit/
-	integration/
-	e2e/
-tailwind.config.ts
-vitest.config.ts
-playwright.config.ts
+frontend/
+  app/
+    components/
+      domains/
+      shared/
+    domains/
+      auth/
+      lists/
+      tasks/
+      connectivity/
+      theme/
+    layouts/
+      default.vue
+      auth.vue
+    middleware/
+      authenticated.ts
+      guest.ts
+    pages/
+      auth/
+      dashboard.vue
+      index.vue
+    plugins/
+  tests/
+    unit/
+    integration/
+    e2e/
 ```
 
-Regle DDD frontend appliquee:
+Principes appliques:
 
-- UI dans `app/pages` + `app/components`.
-- Metier frontend dans `app/domains`.
-- Les pages consomment les use cases frontend sans porter la logique metier.
+- pages: composition d'ecrans
+- domains: use cases/composables metier
+- adapters: appels API/Socket et stockage local
+- composants partages: reutilisation UI sans couplage metier fort
 
-## Choix techniques
+## Auth, redirections et layouts
 
-- Nuxt 4 + Vue 3 pour SSR/SPA moderne et conventions de structure robustes.
-- Layout centralise pour stabiliser la shell applicative avant ajout des ecrans metier.
-- Tailwind CSS pour accelerer une UI coherente, maintenable et responsive.
-- Theme sombre par defaut + mode clair via un domaine `theme` dedie.
-- Persistance du choix de theme via adapter infrastructure navigateur (`localStorage`).
+- pages invitees (`/auth/*`) utilisent un layout dedie `auth.vue`
+- pages protegees utilisent le middleware `authenticated`
+- guard SSR + client pour eviter les artefacts d'affichage lors des redirections
 
-## Lancer le frontend
+## Variables d'environnement
+
+Fichier exemple: `frontend/.env.example`
+
+Variables principales:
+
+- `HOST`
+- `PORT`
+- `NUXT_API_BASE_URL`
+- `NUXT_PUBLIC_API_BASE_URL`
+
+## Lancement local (sans Docker)
+
+Depuis `frontend/`:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Le serveur dev est disponible sur http://localhost:3000.
+Frontend par defaut: `http://localhost:3000`
 
 ## Build production
+
+Depuis `frontend/`:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-### Docker
+## Lancement Docker
 
-Le frontend dispose maintenant d'un Dockerfile multi-stage pour une image de production Nuxt.
+Depuis la racine du repository:
 
 ```bash
 docker compose up --build
 ```
 
-Dans la composition locale:
+Services exposes:
 
-- frontend exposé sur `http://localhost:3001`
-- backend exposé sur `http://localhost:3000`
-- frontend cible le backend via `http://backend:3000`
+- Frontend: `http://localhost:3001`
+- Backend: `http://localhost:3000`
 
-## Tests
+## Contrats backend consommes
 
-```bash
-npm run test:unit
-npm run test:integration
-npm run test:e2e
-```
-
-Niveaux couverts:
-
-- Unitaire: helpers du domaine.
-- Unitaire auth: session applicative, adaptateur de stockage Nuxt et contrat de bootstrap/logout.
-- Integration: use cases/composables avec adapters mockes.
-- E2E: parcours dashboard auth + lists + tasks (Playwright).
-- E2E multi-onglets: verification de coherence des donnees entre clients.
-- Integration realtime: verification des metriques d'observabilite.
-- Integration offline: verification des blocages metier lists/tasks hors ligne.
-- Integration sync conflicts: verification du retry metier sur erreur 409.
-- Integration write-behind: verification de la file offline et de la synchronisation differee.
-
-## CI Frontend
-
-Le workflow GitHub Actions `frontend-ci` est defini dans `.github/workflows/frontend-ci.yml`.
-
-Il s'execute sur `push` et `pull_request` vers `main` quand des fichiers frontend changent, puis lance:
-
-- `npm ci`
-- `npm run test:unit`
-- `npm run test:integration`
-- `npm run build`
-
-## Conformite Frontend (Technical Test)
-
-- Auth: login + register avec confirmation email/mot de passe.
-- Protection de routes via middlewares Nuxt (`authenticated`, `guest`).
-- Page principale en 3 zones (left/main/right) avec right sidebar detail conditionnelle.
-- Suppressions protegees par modales de confirmation.
-- Section `Mes taches terminees` masquee par defaut et depliable.
-- WebSocket Socket.IO avec rooms par liste, mise a jour Pinia sans re-fetch HTTP systematique.
-- Pinia pour les etats globaux auth/listes/taches.
-- Intercepteur HTTP Nuxt pour refresh transparent sur 401 + redirection login en cas d'echec.
-- Dockerfile frontend + integration `docker-compose`.
-- CI frontend dediee (`frontend-ci`: tests unitaires, integration, build).
-
-## Check-list finale
-
-- Auth frontend connectee au backend existant.
-- Inscription avec confirmation email et confirmation mot de passe.
-- Dashboard protege par middleware.
-- Lists et Tasks montes sur des domaines frontend dedies.
-- UI principale en 3 zones.
-- Detail de tache dans la sidebar droite.
-- Confirmation de suppression pour liste et tache.
-- Section des taches terminees repliee par defaut.
-- Socket.IO avec reconnect/resubscribe et observabilite.
-- Offline write-behind pour Lists et Tasks.
-- Retry differe avec backoff exponentiel sur la synchro.
-- Tests unitaires, integration et e2e operationnels.
-- Dockerfile frontend et integration docker-compose ajoutés.
-
-## Dependance ajoutee a cette etape
-
-- `@nuxtjs/tailwindcss` (module Nuxt d'integration Tailwind).
-- `@pinia/nuxt` et `pinia` (etat global frontend).
-
-## Contrat backend Auth utilise
+### Auth
 
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
 
-Le refresh token reste gere en cookie `HttpOnly` cote backend. Le frontend conserve uniquement l'access token en etat applicatif.
-
-## Contrat backend Lists utilise
+### Lists
 
 - `GET /lists`
 - `POST /lists`
 - `DELETE /lists/:listId`
 
-Tous les appels Lists utilisent `Authorization: Bearer <accessToken>`.
-
-## Contrat backend Tasks utilise
+### Tasks
 
 - `GET /lists/:listId/tasks`
 - `POST /lists/:listId/tasks`
@@ -226,15 +141,66 @@ Tous les appels Lists utilisent `Authorization: Bearer <accessToken>`.
 - `PATCH /lists/:listId/tasks/:taskId/reopen`
 - `DELETE /lists/:listId/tasks/:taskId`
 
-Tous les appels Tasks utilisent `Authorization: Bearer <accessToken>`.
+### WebSocket Tasks
 
-## Contrat backend WebSocket Tasks utilise
+- namespace: `/tasks`
+- rooms: `lists:join`, `lists:leave`
+- evenements: `task:created`, `task:updated`, `task:completed`, `task:deleted`
 
-- Namespace Socket.IO: `/tasks`
-- Auth handshake: token bearer via `auth.token`
-- Rooms: `lists:join` / `lists:leave`
-- Evenements serveur:
-	- `task:created`
-	- `task:updated`
-	- `task:completed`
-	- `task:deleted`
+## Tests
+
+Depuis `frontend/`:
+
+```bash
+npm run test:unit
+npm run test:integration
+npm run test:e2e
+```
+
+Couverture ciblee:
+
+- unitaires: regles metier et etat auth
+- integration: domaines lists/tasks/auth + clients/adapters
+- e2e: parcours utilisateur principaux
+
+## CI
+
+Workflow GitHub Actions: `frontend-ci`
+
+Executions:
+
+- `npm ci`
+- `npm run test:unit`
+- `npm run test:integration`
+- `npm run build`
+
+## Stack technique
+
+- Nuxt 4
+- Vue 3
+- Pinia
+- Tailwind CSS
+- Socket.IO client
+- Vitest + Playwright
+
+## Commandes utiles
+
+Depuis `frontend/`:
+
+```bash
+npm run dev
+npm run test:unit
+npm run test:integration
+npm run test:e2e
+npm run build
+npm run preview
+```
+
+## Notes de conception
+
+Le frontend est structure pour rester evolutif:
+
+- separation nette UI/metier
+- flux auth et redirection robustes (SSR + client)
+- composabilite des domaines
+- resilience reseau pour usage reel (offline/retry/sync)
