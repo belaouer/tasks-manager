@@ -1,11 +1,43 @@
 <template>
-  <div class="shell">
-    <header class="shell__header fade-in">
-      <NuxtLink class="shell__brand" to="/">Tasks Manager</NuxtLink>
-      <span class="shell__meta">Frontend Nuxt - Fondation UI</span>
-    </header>
-    <main>
-      <slot />
-    </main>
+  <div
+    class="min-h-screen transition-colors duration-500"
+    :class="isDarkMode ? 'bg-shell-gradient-dark text-slate-100' : 'bg-shell-gradient-light text-slate-900'"
+  >
+    <div class="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <header class="animate-rise mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <NuxtLink class="font-display text-3xl font-bold tracking-tight" to="/">Tasks Manager</NuxtLink>
+        <div class="flex items-center gap-3">
+          <span class="rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider"
+            :class="isDarkMode ? 'border-slate-700 bg-slate-900/60 text-slate-300' : 'border-slate-300 bg-white/70 text-slate-700'"
+          >
+            Frontend Nuxt
+          </span>
+          <button
+            type="button"
+            class="rounded-full border px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
+            :class="isDarkMode
+              ? 'border-cyan-300/40 bg-slate-900/70 text-cyan-200 hover:bg-slate-800'
+              : 'border-slate-300 bg-white/75 text-slate-700 hover:bg-white'"
+            @click="toggle"
+          >
+            {{ isDarkMode ? 'Passer en clair' : 'Passer en sombre' }}
+          </button>
+        </div>
+      </header>
+      <main>
+        <slot />
+      </main>
+    </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { onMounted } from 'vue';
+import { useThemeMode } from '~/domains/theme/application/use-theme-mode';
+
+const { isDarkMode, initialize, toggle } = useThemeMode();
+
+onMounted(() => {
+  initialize();
+});
+</script>
