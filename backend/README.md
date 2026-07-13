@@ -115,7 +115,25 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter l'infrastructure Tasks (adapters persistence in-memory/typeorm/prisma + services) sans endpoint HTTP.
+1. Implémenter la couche Presentation Tasks (DTO, controller, filter) et ses tests d'intégration.
+
+## Etape réalisée: Infrastructure Tasks (Persistence + Services)
+
+Eléments implémentés:
+
+- Module dynamique `TasksPersistenceModule.register({ driver })`.
+- Drivers supportés pour Tasks: `in-memory`, `typeorm`, `prisma`.
+- Adapters repository Tasks pour chaque driver derrière le port unique `TasksRepositoryPort`.
+- Mapper persistence <-> domaine Tasks + store in-memory.
+- Adapters infrastructure de base: `TasksSystemClockAdapter`, `TasksUuidIdGeneratorAdapter`.
+- Branchement complet dans `TasksModule` (use cases injectables via ports abstraits).
+- Modèle Prisma `Task` ajouté au schema.
+
+Décisions clés:
+
+- La couche Application Tasks reste inchangée: seule l'infrastructure est branchée.
+- Le choix du driver reste transparent pour les use cases grâce au port `TasksRepositoryPort`.
+- Le pattern est aligné sur Auth, Users et Lists pour garder une architecture homogène et maintenable.
 
 ## Etape réalisée: Socle métier Tasks (Domain + Application)
 
