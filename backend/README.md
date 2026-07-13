@@ -115,7 +115,36 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Implémenter la couche Presentation Lists (DTO, controller, filter) et ses tests d'intégration.
+1. Mettre à jour les tests E2E globaux pour couvrir Lists dans un scénario inter-domaines complet.
+
+## Etape réalisée: Presentation Lists + tests d'intégration
+
+Eléments implémentés:
+
+- `ListsController` avec endpoints:
+  - `POST /lists` (création d'une liste)
+  - `GET /lists` (lecture des listes de l'utilisateur authentifié)
+  - `DELETE /lists/:listId` (suppression d'une liste appartenant à l'utilisateur)
+- DTO Presentation:
+  - `CreateListRequestDto`
+  - `ListSummaryResponseDto`
+- `ListsJwtAuthGuard` pour valider le bearer access token (`HS256`, issuer, audience).
+- `ListsExceptionFilter` pour mapper exceptions application/domaine Lists vers des réponses HTTP cohérentes.
+- Tests d'intégration `lists.controller.integration.spec.ts` couvrant:
+  - création,
+  - conflit de nom sur même propriétaire (409),
+  - isolation entre utilisateurs,
+  - validation payload (400),
+  - authentification manquante (401),
+  - suppression propriétaire (204),
+  - suppression cross-user interdite (403),
+  - suppression d'une liste inexistante (404).
+
+Décisions clés:
+
+- La sécurité d'accès Lists est portée par la couche Presentation (guard JWT), sans fuite de dépendances techniques vers le domaine.
+- Les use cases Lists restent découplés de HTTP: le controller orchestre via commands applicatifs uniquement.
+- Le mapping d'erreurs est centralisé dans un filter dédié pour garantir un contrat API stable et maintenable.
 
 ## Etape réalisée: Infrastructure Lists (Persistence + Services)
 
