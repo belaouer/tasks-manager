@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '~/domains/auth/infrastructure/auth.store';
 import { useLists } from '~/domains/lists/application/use-lists';
 
 describe('useLists integration', () => {
@@ -23,7 +24,7 @@ describe('useLists integration', () => {
   });
 
   it('creates a list while online', async () => {
-    useState<string>('tasks-manager.auth.access-token', () => 'access-token');
+    useAuthStore().accessToken = 'access-token';
 
     const created = {
       id: 'list-2',

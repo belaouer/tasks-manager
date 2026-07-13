@@ -4,33 +4,38 @@ import type {
   RegisterPayload
 } from '../domain/auth-payloads';
 import { HttpAuthApiAdapter } from '../infrastructure/http-auth-api.adapter';
-import { StateAuthSessionAdapter } from '../infrastructure/state-auth-session.adapter';
-
-const AUTH_BOOTSTRAPPED_KEY = 'tasks-manager.auth.bootstrapped';
+import { useAuthStore } from '../infrastructure/auth.store';
 
 const authApi = new HttpAuthApiAdapter();
 
 export function useAuthSession() {
-  const session = new StateAuthSessionAdapter();
-  const isBootstrapped = useState<boolean>(AUTH_BOOTSTRAPPED_KEY, () => false);
+  const store = useAuthStore();
+
+  function writeAccessToken(token: string): void {
+    store.accessToken = token;
+  }
+
+  function clearSession(): void {
+    store.accessToken = '';
+  }
 
   async function register(payload: RegisterPayload): Promise<void> {
     const result = await authApi.register(payload);
-    session.writeAccessToken(result.accessToken);
+    writeAccessToken(result.accessToken);
   }
 
   async function login(payload: LoginPayload): Promise<void> {
     const result = await authApi.login(payload);
-    session.writeAccessToken(result.accessToken);
+    writeAccessToken(result.accessToken);
   }
 
   async function refresh(): Promise<boolean> {
     try {
       const result = await authApi.refresh();
-      session.writeAccessToken(result.accessToken);
+      writeAccessToken(result.accessToken);
       return true;
     } catch {
-      session.clear();
+      clearSession();
       return false;
     }
   }
@@ -39,31 +44,31 @@ export function useAuthSession() {
     try {
       await authApi.logout();
     } finally {
-      session.clear();
+      clearSession();
     }
   }
 
   async function ensureBootstrapped(): Promise<void> {
-    if (isBootstrapped.value) {
+    if (store.isBootstrapped) {
       return;
     }
 
     await refresh();
-    isBootstrapped.value = true;
+    store.isBootstrapped = true;
   }
 
   async function ensureAuthenticated(): Promise<boolean> {
-    if (session.readAccessToken().length > 0) {
+    if (store.accessToken.length > 0) {
       return true;
     }
 
     await ensureBootstrapped();
-    return session.readAccessToken().length > 0;
+    return store.accessToken.length > 0;
   }
 
   return {
-    accessToken: computed(() => session.readAccessToken()),
-    isAuthenticated: computed(() => session.readAccessToken().length > 0),
+    accessToken: computed(() => store.accessToken),
+    isAuthenticated: computed(() => store.accessToken.length > 0),
     register,
     login,
     refresh,

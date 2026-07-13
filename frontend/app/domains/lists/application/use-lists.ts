@@ -2,10 +2,7 @@ import { computed } from 'vue';
 import { useAuthSession } from '~/domains/auth/application/use-auth-session';
 import type { ListSummary } from '../domain/list-summary';
 import { HttpListsApiAdapter } from '../infrastructure/http-lists-api.adapter';
-
-const LISTS_STATE_KEY = 'tasks-manager.lists.state';
-const LISTS_LOADING_KEY = 'tasks-manager.lists.loading';
-const LISTS_ERROR_KEY = 'tasks-manager.lists.error';
+import { useListsStore } from '../infrastructure/lists.store';
 
 const listsApi = new HttpListsApiAdapter();
 
@@ -19,26 +16,24 @@ interface UseListsDependencies {
 }
 
 export function useLists(deps: UseListsDependencies = {}) {
-  const lists = useState<readonly ListSummary[]>(LISTS_STATE_KEY, () => []);
-  const isLoading = useState<boolean>(LISTS_LOADING_KEY, () => false);
-  const errorMessage = useState<string>(LISTS_ERROR_KEY, () => '');
+  const store = useListsStore();
   const authSession = useAuthSession();
   const isOnline = deps.isOnline ?? (() => (!import.meta.client ? true : navigator.onLine));
   const listsApiPort = deps.listsApi ?? listsApi;
 
   function resetError(): void {
-    errorMessage.value = '';
+    store.errorMessage = '';
   }
 
   async function loadLists(): Promise<void> {
     resetError();
 
     if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: impossible de charger les listes.';
+      store.errorMessage = 'Mode hors ligne: impossible de charger les listes.';
       return;
     }
 
-    isLoading.value = true;
+    store.isLoading = true;
 
     try {
       const token = authSession.accessToken.value;
@@ -46,12 +41,12 @@ export function useLists(deps: UseListsDependencies = {}) {
         throw new Error('missing-access-token');
       }
 
-      lists.value = await listsApiPort.getLists(token);
+      store.lists = await listsApiPort.getLists(token);
     } catch {
-      errorMessage.value = 'Impossible de charger les listes.';
-      lists.value = [];
+      store.errorMessage = 'Impossible de charger les listes.';
+      store.lists = [];
     } finally {
-      isLoading.value = false;
+      store.isLoading = false;
     }
   }
 
@@ -59,13 +54,13 @@ export function useLists(deps: UseListsDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: creation de liste indisponible.';
+      store.errorMessage = 'Mode hors ligne: creation de liste indisponible.';
       return false;
     }
 
     const normalizedName = name.trim();
     if (normalizedName.length === 0) {
-      errorMessage.value = 'Le nom de la liste est obligatoire.';
+      store.errorMessage = 'Le nom de la liste est obligatoire.';
       return false;
     }
 
@@ -76,10 +71,10 @@ export function useLists(deps: UseListsDependencies = {}) {
       }
 
       const created = await listsApiPort.createList(token, { name: normalizedName });
-      lists.value = [created, ...lists.value];
+      store.lists = [created, ...store.lists];
       return true;
     } catch {
-      errorMessage.value = 'Creation impossible (nom deja pris ou session invalide).';
+      store.errorMessage = 'Creation impossible (nom deja pris ou session invalide).';
       return false;
     }
   }
@@ -88,7 +83,7 @@ export function useLists(deps: UseListsDependencies = {}) {
     resetError();
 
     if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: suppression de liste indisponible.';
+      store.errorMessage = 'Mode hors ligne: suppression de liste indisponible.';
       return;
     }
 
@@ -99,16 +94,16 @@ export function useLists(deps: UseListsDependencies = {}) {
       }
 
       await listsApiPort.deleteList(token, listId);
-      lists.value = lists.value.filter((item) => item.id !== listId);
+      store.lists = store.lists.filter((item) => item.id !== listId);
     } catch {
-      errorMessage.value = 'Suppression impossible pour cette liste.';
+      store.errorMessage = 'Suppression impossible pour cette liste.';
     }
   }
 
   return {
-    lists: computed(() => lists.value),
-    isLoading: computed(() => isLoading.value),
-    errorMessage: computed(() => errorMessage.value),
+    lists: computed(() => store.lists),
+    isLoading: computed(() => store.isLoading),
+    errorMessage: computed(() => store.errorMessage),
     loadLists,
     createList,
     deleteList,
