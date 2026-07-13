@@ -3,7 +3,7 @@
     class="min-h-screen transition-colors duration-500"
     :class="isDarkMode ? 'bg-shell-gradient-dark text-slate-100' : 'bg-shell-gradient-light text-slate-900'"
   >
-    <div class="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="mx-auto min-h-screen w-full max-w-[1600px] px-2 py-5 sm:px-3 md:px-4 lg:px-5">
       <header class="animate-rise mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <NuxtLink class="font-display text-3xl font-bold tracking-tight" to="/">Tasks Manager</NuxtLink>
         <div class="flex items-center gap-3">

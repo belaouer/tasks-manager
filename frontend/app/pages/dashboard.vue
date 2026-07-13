@@ -1,5 +1,10 @@
 <template>
-  <section class="grid animate-rise gap-4 xl:grid-cols-[minmax(240px,300px)_minmax(0,1fr)_minmax(280px,360px)]">
+  <section
+    class="grid animate-rise gap-4"
+    :class="selectedTask
+      ? 'xl:grid-cols-[minmax(260px,340px)_minmax(0,1fr)_minmax(280px,360px)]'
+      : 'xl:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]'"
+  >
     <article
       class="min-w-0 rounded-3xl border p-6 shadow-shell backdrop-blur sm:p-8"
       :class="isDarkMode ? 'border-slate-700 bg-slate-900/65' : 'border-white/80 bg-white/75'"
@@ -77,9 +82,9 @@
           class="min-w-0 rounded-2xl border p-4"
           :class="isDarkMode ? 'border-slate-700 bg-slate-950/45' : 'border-slate-200 bg-white/85'"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <h2 class="break-words text-base font-semibold">{{ list.name }}</h2>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 flex-1">
+              <h2 class="truncate text-base font-semibold sm:whitespace-normal sm:break-words">{{ list.name }}</h2>
               <p v-if="list.pendingSync" class="mt-1 text-xs font-semibold" :class="isDarkMode ? 'text-amber-200' : 'text-amber-700'">
                 En attente de synchronisation
               </p>
@@ -87,7 +92,7 @@
                 Creee le {{ formatDate(list.createdAt) }}
               </p>
             </div>
-            <div class="flex shrink-0 flex-wrap justify-end gap-2">
+            <div class="flex flex-wrap gap-2 sm:justify-end">
               <button
                 type="button"
                 class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
