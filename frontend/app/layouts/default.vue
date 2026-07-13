@@ -9,6 +9,7 @@
         <div class="flex items-center gap-3">
           <nav class="flex items-center gap-2 text-sm font-medium">
             <NuxtLink
+              v-if="!isAuthenticated"
               to="/auth/login"
               class="rounded-lg px-3 py-2 transition"
               :class="isDarkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100'"
@@ -16,6 +17,7 @@
               Login
             </NuxtLink>
             <NuxtLink
+              v-if="!isAuthenticated"
               to="/auth/register"
               class="rounded-lg px-3 py-2 transition"
               :class="isDarkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100'"
@@ -23,6 +25,7 @@
               Register
             </NuxtLink>
             <NuxtLink
+              v-if="isAuthenticated"
               to="/dashboard"
               class="rounded-lg px-3 py-2 transition"
               :class="isDarkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100'"

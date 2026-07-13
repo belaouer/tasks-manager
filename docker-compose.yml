@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tasks_manager
       NODE_ENV: production
       PORT: 3000
+      FRONTEND_ORIGINS: http://localhost:3001
     ports:
       - "3000:3000"
     depends_on:
@@ -47,7 +48,8 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
-      NUXT_PUBLIC_API_BASE_URL: http://backend:3000
+      NUXT_API_BASE_URL: http://backend:3000
+      NUXT_PUBLIC_API_BASE_URL: http://localhost:3000
     ports:
       - "3001:3000"
     depends_on:
