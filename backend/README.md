@@ -4,7 +4,7 @@ Ce backend est conçu comme une démonstration professionnelle de DDD + Architec
 
 Etat actuel du développement: phase 1 centrée uniquement sur Authentification.
 
-Avancement actuel: Auth Domain + Application + Infrastructure + Presentation HTTP + tests unitaires + tests d'intégration + tests E2E.
+Avancement actuel: Auth complet + Users (socle Domain + Application).
 
 ## Objectifs architecturaux
 
@@ -115,7 +115,164 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la transition vers le prochain domaine (Users) sans modifier Auth existant.
+1. Préparer la phase Lists (analyse + squelette architectural) sans toucher aux comportements Auth/Users.
+
+## Etape réalisée: Stabilisation E2E croisée Auth + Users
+
+Eléments implémentés:
+
+- Extension du scénario E2E principal vers un flux inter-domaines complet:
+  - `register` Auth,
+  - lecture profil `GET /users/me`,
+  - lecture ciblée `GET /users/:id` pour le propriétaire,
+  - vérification d'interdiction cross-user (`403`).
+- Conservation des scénarios E2E Auth critiques déjà en place (validation register, refresh, logout).
+
+Décisions clés:
+
+- Les tests E2E valident désormais explicitement la cohérence d'identité entre Auth et Users.
+- L'isolation des données utilisateur est vérifiée dans un parcours réel bout en bout.
+- Le flux reste déterministe avec `PERSISTENCE_DRIVER=in-memory` pour une exécution rapide et stable.
+
+## Etape réalisée: Autorisation Users par identité authentifiée
+
+Eléments implémentés:
+
+- `UsersJwtAuthGuard` pour valider le bearer access token (`HS256`, issuer, audience).
+- Activation du guard sur `UsersController` et documentation Swagger bearer.
+- Endpoint `GET /users/me` pour récupérer le profil de l'utilisateur authentifié.
+- Contrôle d'appartenance stricte sur `GET /users/:id` et `PATCH /users/:id`.
+- Payload `POST /users` aligné sur l'identité authentifiée (email + userId issus du token).
+- Alignement Auth -> Users provisioning pour partager le même `userId` entre contextes.
+- Tests d'intégration Users étendus: 401 sans token, 403 accès cross-user, lecture/update own profile.
+
+Décisions clés:
+
+- L'isolation par identité est appliquée dans la couche Presentation via un guard dédié.
+- Le domaine/application restent inchangés dans leurs responsabilités métier.
+- L'alignement `userId` Auth/Users garantit la cohérence de l'identité inter-domaines.
+
+## Etape réalisée: Mise à jour du profil Users (rename)
+
+Eléments implémentés:
+
+- Nouveau use case `UpdateUserProfileUseCase`.
+- Nouveau command applicatif `UpdateUserProfileCommand`.
+- Endpoint `PATCH /users/:id` dans `UsersController`.
+- DTO de payload `UpdateUserProfileRequestDto` avec validation + Swagger.
+- Test unitaire du use case de mise à jour (`update-user-profile.use-case.spec.ts`).
+- Extension des tests d'intégration Users avec scénarios update:
+  - succès (200),
+  - utilisateur inconnu (404),
+  - payload invalide (400).
+
+Décisions clés:
+
+- Le renommage reste encapsulé dans le domaine (`User.updateName`) pour préserver les invariants.
+- Le contrôleur ne contient aucune logique métier: orchestration via use case uniquement.
+- Les erreurs applicatives/domaines réutilisent le filtre Users déjà centralisé.
+
+## Etape réalisée: Intégration Auth <-> Users (register)
+
+Eléments implémentés:
+
+- Ajout d'un port Auth dédié `UserProfileProvisioningPort` pour orchestrer la création du profil Users.
+- Adapter d'infrastructure Auth vers Users (`UsersProfileProvisioningAdapter`) branché via DI.
+- Le `RegisterUseCase` Auth provisionne désormais le profil Users pendant l'inscription.
+- Enrichissement du payload `POST /auth/register` avec `firstName` et `lastName`.
+- Validation et Swagger alignés sur le nouveau contrat d'inscription.
+- Mapping d'erreurs dédié côté Auth (`InvalidUserProfileApplicationException`).
+
+Tests alignés:
+
+- Tests d'intégration Auth mis à jour pour le nouveau payload register.
+- Test E2E Auth mis à jour pour couvrir le nouveau contrat.
+
+Décisions clés:
+
+- L'intégration inter-domaines passe par un port abstrait côté Auth pour préserver l'architecture hexagonale.
+- Auth ne dépend pas des détails techniques Users: seul l'adapter connaît le use case concret.
+- Le contrat register est aligné avec le besoin fonctionnel (création immédiate du profil utilisateur).
+
+## Etape réalisée: Presentation Users + tests d'intégration
+
+Eléments implémentés:
+
+- Controller HTTP `UsersController` avec endpoints:
+  - `POST /users` (création profil)
+  - `GET /users/:id` (lecture profil)
+- DTO de requête/réponse Users avec validation et schéma Swagger.
+- `UsersExceptionFilter` pour mapper exceptions applicatives/domaines en HTTP cohérent.
+- Tests d'intégration `users.controller.integration.spec.ts` couvrant:
+  - création et lecture profil,
+  - email en doublon (409),
+  - utilisateur inconnu (404),
+  - payload invalide (400).
+
+Décisions clés:
+
+- La présentation Users reste découplée des adapters concrets via use cases.
+- La gestion des erreurs Users suit la même stratégie centralisée que Auth.
+- Les tests d'intégration valident le contrat HTTP réel sans dépendre d'une base externe (driver in-memory).
+
+## Etape réalisée: Infrastructure Users (Persistence + Services)
+
+Eléments implémentés:
+
+- Module dynamique `UsersPersistenceModule.register({ driver })`.
+- Drivers supportés pour Users: `in-memory`, `typeorm`, `prisma`.
+- Adapters repository Users pour chaque driver derrière le port unique `UsersRepositoryPort`.
+- Mapper persistence <-> domaine Users + store in-memory.
+- Adapters infrastructure de base: `UsersSystemClockAdapter`, `UsersUuidIdGeneratorAdapter`.
+- Branchement complet dans `UsersModule` (use cases injectables via ports abstraits).
+- Modèle Prisma `UserProfile` ajouté au schema.
+
+Décisions clés:
+
+- La couche Application Users reste inchangée: seule l'infrastructure est branchée.
+- Le choix du driver reste transparent pour les use cases grâce au port `UsersRepositoryPort`.
+- Le pattern est volontairement aligné sur Auth pour garder une architecture homogène et maintenable.
+
+## Etape réalisée: Socle métier Users (Domain + Application)
+
+Eléments implémentés:
+
+- Domaine Users:
+  - Entité `User` (création, rehydratation, mise à jour du nom).
+  - Value Objects `UserId`, `UserEmail`, `FirstName`, `LastName`.
+  - Exception domaine dédiée pour validation des noms.
+  - Ports abstraits: `UsersRepositoryPort`, `UsersClockPort`, `UsersIdGeneratorPort`.
+- Application Users:
+  - Use cases `CreateUserUseCase` et `GetUserProfileUseCase`.
+  - Commands/DTOs dédiés (`CreateUserCommand`, `GetUserProfileCommand`, `UserProfileDto`).
+  - Exceptions applicatives (`UserAlreadyExistsApplicationException`, `UserNotFoundApplicationException`).
+- Tests unitaires Users:
+  - `create-user.use-case.spec.ts`
+  - `get-user-profile.use-case.spec.ts`
+
+Décisions clés:
+
+- Le périmètre reste strictement Domain + Application: aucune dépendance ORM/HTTP ajoutée à cette étape.
+- Les use cases dépendent uniquement de ports abstraits, pour préparer des adapters interchangeables ensuite.
+- Le modèle Users est découplé d'Auth pour conserver des bounded contexts clairs.
+
+## Etape réalisée: Transition vers le domaine Users
+
+Eléments implémentés:
+
+- Création du module `UsersModule` sans logique métier.
+- Branchement de `UsersModule` dans la composition racine (`AppModule`).
+- Mise en place de l'arborescence hexagonale complète `src/domains/users`:
+  - `domain` (entities, value-objects, services, ports, exceptions, factories)
+  - `application` (dto, use-cases, services)
+  - `infrastructure` (persistence/common/typeorm/prisma, services)
+  - `presentation` (controllers, dto, guards, filters, mappers)
+
+Décisions clés:
+
+- Aucun code métier Users n'est ajouté à cette étape pour isoler le changement structurel.
+- Le module Auth reste inchangé, ce qui sécurise la continuité fonctionnelle.
+- Le squelette Users suit exactement les conventions DDD + Hexagonal déjà validées sur Auth.
 
 ## Etape réalisée: Validation stricte des variables d'environnement
 

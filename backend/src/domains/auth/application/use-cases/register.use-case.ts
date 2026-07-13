@@ -7,6 +7,7 @@ import { ClockPort } from '../../domain/ports/clock.port';
 import { IdGeneratorPort } from '../../domain/ports/id-generator.port';
 import { PasswordHasherPort } from '../../domain/ports/password-hasher.port';
 import { TokenIssuerPort } from '../../domain/ports/token-issuer.port';
+import { UserProfileProvisioningPort } from '../../domain/ports/user-profile-provisioning.port';
 import { UserRepositoryPort } from '../../domain/ports/user-repository.port';
 import { AuthResultDto } from '../dto/auth-result.dto';
 import { RegisterCommand } from '../dto/register.command';
@@ -18,6 +19,7 @@ export class RegisterUseCase {
     private readonly userRepository: UserRepositoryPort,
     private readonly passwordHasher: PasswordHasherPort,
     private readonly tokenIssuer: TokenIssuerPort,
+    private readonly userProfileProvisioning: UserProfileProvisioningPort,
     private readonly clock: ClockPort,
     private readonly idGenerator: IdGeneratorPort,
   ) {}
@@ -34,8 +36,17 @@ export class RegisterUseCase {
     const passwordHash = await this.passwordHasher.hash(password.getValue());
     const now = this.clock.now();
 
+    const userId = UserId.create(this.idGenerator.generate());
+
+    await this.userProfileProvisioning.provision({
+      userId: userId.getValue(),
+      email: email.getValue(),
+      firstName: command.firstName,
+      lastName: command.lastName,
+    });
+
     const user = AuthUser.registerNew({
-      id: UserId.create(this.idGenerator.generate()),
+      id: userId,
       email,
       passwordHash,
       now,

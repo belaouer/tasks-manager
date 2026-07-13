@@ -46,6 +46,8 @@ describe('AuthController (integration)', () => {
       .send({
         email: 'register.integration@example.com',
         password: 'Password123',
+        firstName: 'Register',
+        lastName: 'Integration',
       })
       .expect(201);
 
@@ -62,6 +64,8 @@ describe('AuthController (integration)', () => {
       .send({
         email: 'refresh.integration@example.com',
         password: 'Password123',
+        firstName: 'Refresh',
+        lastName: 'Integration',
       })
       .expect(201);
 
@@ -95,6 +99,8 @@ describe('AuthController (integration)', () => {
       .send({
         email: 'logout.integration@example.com',
         password: 'Password123',
+        firstName: 'Logout',
+        lastName: 'Integration',
       })
       .expect(201);
 

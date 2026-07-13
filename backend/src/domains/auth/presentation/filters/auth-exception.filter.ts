@@ -8,6 +8,7 @@ import { Response } from 'express';
 import { EmailAlreadyRegisteredApplicationException } from '../../application/exceptions/email-already-registered.application-exception';
 import { InvalidCredentialsApplicationException } from '../../application/exceptions/invalid-credentials.application-exception';
 import { InvalidRefreshTokenApplicationException } from '../../application/exceptions/invalid-refresh-token.application-exception';
+import { InvalidUserProfileApplicationException } from '../../application/exceptions/invalid-user-profile.application-exception';
 import { InvalidEmailFormatDomainException } from '../../domain/exceptions/invalid-email-format.domain-exception';
 import { WeakPasswordDomainException } from '../../domain/exceptions/weak-password.domain-exception';
 
@@ -15,6 +16,7 @@ import { WeakPasswordDomainException } from '../../domain/exceptions/weak-passwo
   EmailAlreadyRegisteredApplicationException,
   InvalidCredentialsApplicationException,
   InvalidRefreshTokenApplicationException,
+  InvalidUserProfileApplicationException,
   InvalidEmailFormatDomainException,
   WeakPasswordDomainException,
 )
@@ -34,6 +36,11 @@ export class AuthExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof InvalidRefreshTokenApplicationException) {
       response.status(HttpStatus.UNAUTHORIZED).json({ message: exception.message });
+      return;
+    }
+
+    if (exception instanceof InvalidUserProfileApplicationException) {
+      response.status(HttpStatus.BAD_REQUEST).json({ message: exception.message });
       return;
     }
 

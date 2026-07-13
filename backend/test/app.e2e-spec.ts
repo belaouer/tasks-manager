@@ -3,7 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 
-describe('Auth (e2e)', () => {
+describe('Auth + Users (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -45,6 +45,8 @@ describe('Auth (e2e)', () => {
       .send({
         email: 'not-an-email',
         password: 'short',
+        firstName: 'A',
+        lastName: '',
       })
       .expect(400);
   });
@@ -55,6 +57,8 @@ describe('Auth (e2e)', () => {
       .send({
         email: 'auth.e2e@example.com',
         password: 'Password123',
+        firstName: 'Auth',
+        lastName: 'E2E',
       })
       .expect(201);
 
@@ -96,7 +100,61 @@ describe('Auth (e2e)', () => {
       .set('Cookie', [rotatedCookie as string])
       .expect(401);
   });
+
+  it('register -> users/me -> users/:id ownership flow', async () => {
+    const ownerRegisterResponse = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'owner.e2e@example.com',
+        password: 'Password123',
+        firstName: 'Owner',
+        lastName: 'E2E',
+      })
+      .expect(201);
+
+    const ownerAccessToken = ownerRegisterResponse.body.accessToken as string;
+
+    const ownerProfileResponse = await request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    const ownerId = ownerProfileResponse.body.id as string;
+    expect(ownerProfileResponse.body.email).toBe('owner.e2e@example.com');
+
+    await request(app.getHttpServer())
+      .get(`/users/${ownerId}`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    const secondRegisterResponse = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'second.e2e@example.com',
+        password: 'Password123',
+        firstName: 'Second',
+        lastName: 'E2E',
+      })
+      .expect(201);
+
+    const secondAccessToken = secondRegisterResponse.body.accessToken as string;
+    const secondProfileResponse = await request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', bearer(secondAccessToken))
+      .expect(200);
+
+    const secondId = secondProfileResponse.body.id as string;
+
+    await request(app.getHttpServer())
+      .get(`/users/${secondId}`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(403);
+  });
 });
+
+function bearer(accessToken: string): string {
+  return `Bearer ${accessToken}`;
+}
 
 function extractRefreshCookie(setCookieHeader: string[] | undefined): string | null {
   if (!setCookieHeader || setCookieHeader.length === 0) {
