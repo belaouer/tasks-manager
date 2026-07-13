@@ -149,9 +149,11 @@ describe('useTasks integration', () => {
       longDescription: null,
       dueDate: '2026-07-26T12:00:00.000Z'
     });
-    expect(created).toBe(false);
-    expect(tasks.errorMessage.value).toBe('Mode hors ligne: creation de tache indisponible.');
+    expect(created).toBe(true);
+    expect(tasks.errorMessage.value).toBe('Mode hors ligne: tache en attente de synchronisation.');
     expect(api.createTask).not.toHaveBeenCalled();
+    expect(tasks.pendingSyncCount.value).toBe(1);
+    expect(tasks.getTasksForList('list-1').value[0]?.pendingSync).toBe(true);
 
     await tasks.completeTask('list-1', 'task-1');
     expect(tasks.errorMessage.value).toBe('Mode hors ligne: completion de tache indisponible.');
@@ -164,6 +166,43 @@ describe('useTasks integration', () => {
     await tasks.deleteTask('list-1', 'task-1');
     expect(tasks.errorMessage.value).toBe('Mode hors ligne: suppression de tache indisponible.');
     expect(api.deleteTask).not.toHaveBeenCalled();
+  });
+
+  it('flushes offline queued creates when connection is back', async () => {
+    const createdServerTask = createTask({ id: 'server-task-1', pendingSync: undefined });
+
+    let online = false;
+
+    const api = {
+      getListTasks: vi.fn(async () => []),
+      createTask: vi.fn(async () => createdServerTask),
+      completeTask: vi.fn(),
+      reopenTask: vi.fn(),
+      deleteTask: vi.fn()
+    };
+
+    const tasks = useTasks({
+      getAccessToken: () => 'access-token',
+      isOnline: () => online,
+      tasksApi: api as any
+    });
+
+    const queued = await tasks.createTask('list-1', {
+      shortDescription: 'Queued task',
+      longDescription: null,
+      dueDate: '2026-07-26T12:00:00.000Z'
+    });
+
+    expect(queued).toBe(true);
+    expect(tasks.pendingSyncCount.value).toBe(1);
+
+    online = true;
+    await tasks.flushPendingCreates();
+
+    expect(tasks.pendingSyncCount.value).toBe(0);
+    expect(api.createTask).toHaveBeenCalledTimes(1);
+    expect(tasks.getTasksForList('list-1').value[0]?.id).toBe('server-task-1');
+    expect(tasks.getTasksForList('list-1').value[0]?.pendingSync).toBeUndefined();
   });
 
   it('retries completeTask once after synchronization conflict', async () => {

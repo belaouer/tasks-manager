@@ -19,6 +19,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Observabilite realtime: metriques de reconnexion + horodatages de sante socket.
 - Fondations offline-first UX: statut reseau frontend + garde-fous sur ecritures hors ligne.
 - Retries metier sur conflits de synchronisation pour les mutations Tasks.
+- File locale write-behind pour creation de taches hors ligne + flush auto au retour reseau.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
@@ -121,12 +122,12 @@ Niveaux couverts:
 - Integration realtime: verification des metriques d'observabilite.
 - Integration offline: verification des blocages metier lists/tasks hors ligne.
 - Integration sync conflicts: verification du retry metier sur erreur 409.
+- Integration write-behind: verification de la file offline et de la synchronisation differee.
 
 ## Prochaine etape
 
 Prochaine evolution suggeree:
 
-- file de synchro offline locale (write-behind),
 - gestion explicite des conflits metier multi-utilisateurs.
 
 ## Dependance ajoutee a cette etape

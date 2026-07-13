@@ -8,6 +8,7 @@ export interface TaskSummary {
   readonly completedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly pendingSync?: boolean;
 }
 
 export interface CreateTaskPayload {

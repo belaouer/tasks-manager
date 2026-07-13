@@ -7,7 +7,16 @@ import { HttpTasksApiAdapter } from '../infrastructure/http-tasks-api.adapter';
 const TASKS_STATE_KEY = 'tasks-manager.tasks.by-list';
 const TASKS_LOADING_KEY = 'tasks-manager.tasks.loading';
 const TASKS_ERROR_KEY = 'tasks-manager.tasks.error';
+const TASKS_PENDING_CREATE_QUEUE_KEY = 'tasks-manager.tasks.pending-create-queue';
 const HTTP_CONFLICT_STATUS = 409;
+
+interface PendingTaskCreateOperation {
+  readonly operationId: string;
+  readonly listId: string;
+  readonly tempTaskId: string;
+  readonly payload: CreateTaskPayload;
+  readonly createdAt: string;
+}
 
 interface UseTasksDependencies {
   readonly getAccessToken?: () => string;
@@ -31,6 +40,10 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   const byList = useState<Record<string, readonly TaskSummary[]>>(TASKS_STATE_KEY, () => ({}));
   const isLoading = useState<boolean>(TASKS_LOADING_KEY, () => false);
   const errorMessage = useState<string>(TASKS_ERROR_KEY, () => '');
+  const pendingCreateQueue = useState<readonly PendingTaskCreateOperation[]>(
+    TASKS_PENDING_CREATE_QUEUE_KEY,
+    () => []
+  );
 
   const getAccessToken =
     deps.getAccessToken ??
@@ -65,6 +78,41 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     return token;
   }
 
+  function createPendingTask(
+    listId: string,
+    payload: CreateTaskPayload,
+    createdAt: string,
+    tempTaskId: string
+  ): TaskSummary {
+    return {
+      id: tempTaskId,
+      ownerUserId: 'pending-offline',
+      listId,
+      shortDescription: payload.shortDescription,
+      longDescription: payload.longDescription,
+      dueDate: payload.dueDate,
+      completedAt: null,
+      createdAt,
+      updatedAt: createdAt,
+      pendingSync: true
+    };
+  }
+
+  function enqueuePendingCreate(listId: string, payload: CreateTaskPayload): TaskSummary {
+    const timestamp = new Date().toISOString();
+    const tempTaskId = `pending-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+    const operation: PendingTaskCreateOperation = {
+      operationId: `op-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+      listId,
+      tempTaskId,
+      payload,
+      createdAt: timestamp
+    };
+
+    pendingCreateQueue.value = [...pendingCreateQueue.value, operation];
+    return createPendingTask(listId, payload, timestamp, tempTaskId);
+  }
+
   function isConflictError(error: unknown): boolean {
     if (!error || typeof error !== 'object') {
       return false;
@@ -87,7 +135,50 @@ export function useTasks(deps: UseTasksDependencies = {}) {
 
   async function refreshListFromServer(accessToken: string, listId: string): Promise<void> {
     const refreshed = await tasksApi.getListTasks(accessToken, listId);
-    writeListTasks(listId, refreshed);
+    const pendingTasks = pendingCreateQueue.value
+      .filter((operation) => operation.listId === listId)
+      .map((operation) =>
+        createPendingTask(listId, operation.payload, operation.createdAt, operation.tempTaskId)
+      );
+
+    writeListTasks(listId, [...pendingTasks, ...refreshed]);
+  }
+
+  async function flushPendingCreates(): Promise<void> {
+    if (!isOnline() || pendingCreateQueue.value.length === 0) {
+      return;
+    }
+
+    let token = '';
+    try {
+      token = getRequiredToken();
+    } catch {
+      errorMessage.value = 'Synchronisation en attente: session invalide.';
+      return;
+    }
+
+    const remainingOperations: PendingTaskCreateOperation[] = [];
+
+    for (const operation of pendingCreateQueue.value) {
+      try {
+        const created = await tasksApi.createTask(token, operation.listId, operation.payload);
+        const currentTasks = readListTasks(operation.listId);
+        writeListTasks(
+          operation.listId,
+          [created, ...currentTasks.filter((task) => task.id !== operation.tempTaskId)]
+        );
+      } catch {
+        remainingOperations.push(operation);
+      }
+    }
+
+    pendingCreateQueue.value = remainingOperations;
+
+    if (remainingOperations.length > 0) {
+      errorMessage.value = 'Certaines taches restent en attente de synchronisation.';
+    } else if (errorMessage.value.includes('synchronisation')) {
+      errorMessage.value = '';
+    }
   }
 
   async function loadTasks(listId: string): Promise<void> {
@@ -118,14 +209,16 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   ): Promise<boolean> {
     resetError();
 
-    if (!isOnline()) {
-      errorMessage.value = 'Mode hors ligne: creation de tache indisponible.';
-      return false;
-    }
-
     if (payload.shortDescription.trim().length === 0) {
       errorMessage.value = 'La description courte est obligatoire.';
       return false;
+    }
+
+    if (!isOnline()) {
+      const pendingTask = enqueuePendingCreate(listId, payload);
+      writeListTasks(listId, [pendingTask, ...readListTasks(listId)]);
+      errorMessage.value = 'Mode hors ligne: tache en attente de synchronisation.';
+      return true;
     }
 
     try {
@@ -277,8 +370,10 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   return {
     isLoading: computed(() => isLoading.value),
     errorMessage: computed(() => errorMessage.value),
+    pendingSyncCount: computed(() => pendingCreateQueue.value.length),
     getTasksForList: (listId: string) => computed(() => readListTasks(listId)),
     loadTasks,
+    flushPendingCreates,
     createTask,
     completeTask,
     reopenTask,
