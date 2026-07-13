@@ -115,7 +115,115 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la phase Lists (analyse + squelette architectural) sans toucher aux comportements Auth/Users.
+1. Préparer la finalisation de la branche Lists (revue finale + merge vers main).
+
+## Etape réalisée: E2E global inter-domaines avec Lists
+
+Eléments implémentés:
+
+- Le scénario E2E global couvre désormais Auth + Users + Lists.
+- Extension de `test/app.e2e-spec.ts` avec un parcours complet Lists:
+  - création de deux identités via Auth,
+  - création de listes,
+  - vérification de conflit de nom sur même propriétaire (409),
+  - vérification d'isolation des listes entre utilisateurs,
+  - vérification de suppression cross-user interdite (403),
+  - suppression propriétaire (204) et vérification post-suppression.
+
+Décisions clés:
+
+- Le scénario est construit en mode boîte noire HTTP pour valider le comportement réel inter-domaines.
+- L'environnement E2E reste en `in-memory` pour conserver la rapidité et la stabilité des exécutions.
+- Le test complète les validations d'intégration module par module en apportant une preuve bout-en-bout.
+
+## Etape réalisée: Presentation Lists + tests d'intégration
+
+Eléments implémentés:
+
+- `ListsController` avec endpoints:
+  - `POST /lists` (création d'une liste)
+  - `GET /lists` (lecture des listes de l'utilisateur authentifié)
+  - `DELETE /lists/:listId` (suppression d'une liste appartenant à l'utilisateur)
+- DTO Presentation:
+  - `CreateListRequestDto`
+  - `ListSummaryResponseDto`
+- `ListsJwtAuthGuard` pour valider le bearer access token (`HS256`, issuer, audience).
+- `ListsExceptionFilter` pour mapper exceptions application/domaine Lists vers des réponses HTTP cohérentes.
+- Tests d'intégration `lists.controller.integration.spec.ts` couvrant:
+  - création,
+  - conflit de nom sur même propriétaire (409),
+  - isolation entre utilisateurs,
+  - validation payload (400),
+  - authentification manquante (401),
+  - suppression propriétaire (204),
+  - suppression cross-user interdite (403),
+  - suppression d'une liste inexistante (404).
+
+Décisions clés:
+
+- La sécurité d'accès Lists est portée par la couche Presentation (guard JWT), sans fuite de dépendances techniques vers le domaine.
+- Les use cases Lists restent découplés de HTTP: le controller orchestre via commands applicatifs uniquement.
+- Le mapping d'erreurs est centralisé dans un filter dédié pour garantir un contrat API stable et maintenable.
+
+## Etape réalisée: Infrastructure Lists (Persistence + Services)
+
+Eléments implémentés:
+
+- Module dynamique `ListsPersistenceModule.register({ driver })`.
+- Drivers supportés pour Lists: `in-memory`, `typeorm`, `prisma`.
+- Adapters repository Lists pour chaque driver derrière le port unique `ListsRepositoryPort`.
+- Mapper persistence <-> domaine Lists + store in-memory.
+- Adapters infrastructure de base: `ListsSystemClockAdapter`, `ListsUuidIdGeneratorAdapter`.
+- Branchement complet dans `ListsModule` (use cases injectables via ports abstraits).
+- Modèle Prisma `TaskList` ajouté au schema.
+
+Décisions clés:
+
+- La couche Application Lists reste inchangée: seule l'infrastructure est branchée.
+- Le choix du driver reste transparent pour les use cases grâce au port `ListsRepositoryPort`.
+- Le pattern est aligné sur Auth et Users pour garder une architecture homogène et maintenable.
+
+## Etape réalisée: Socle métier Lists (Domain + Application)
+
+Eléments implémentés:
+
+- Domaine Lists:
+  - Entité `TaskList` (création, rehydratation, renommage).
+  - Value Objects `ListId`, `ListName`, `OwnerUserId`.
+  - Exceptions domaine de validation (`invalid list name/id/owner user id`).
+  - Ports abstraits: `ListsRepositoryPort`, `ListsClockPort`, `ListsIdGeneratorPort`.
+- Application Lists:
+  - Use cases `CreateListUseCase`, `GetUserListsUseCase`, `DeleteListUseCase`.
+  - Commands/DTOs dédiés (`CreateListCommand`, `GetUserListsCommand`, `DeleteListCommand`, `ListSummaryDto`).
+  - Exceptions applicatives (`ListNameAlreadyExistsApplicationException`, `ListNotFoundApplicationException`, `ListAccessDeniedApplicationException`).
+- Tests unitaires Lists:
+  - `create-list.use-case.spec.ts`
+  - `get-user-lists.use-case.spec.ts`
+  - `delete-list.use-case.spec.ts`
+
+Décisions clés:
+
+- Le périmètre reste strictement Domain + Application: aucune dépendance ORM/HTTP ajoutée à cette étape.
+- Les règles critiques sont portées par le domaine (invariants) et l'application (orchestration/autorisations métier).
+- Les tests unitaires valident les scénarios principaux avant l'introduction des adapters de persistence.
+
+## Etape réalisée: Transition vers le domaine Lists
+
+Eléments implémentés:
+
+- Création du module `ListsModule` sans logique métier.
+- Branchement de `ListsModule` dans la composition racine (`AppModule`).
+- Mise en place de l'arborescence hexagonale complète `src/domains/lists`:
+  - `domain` (entities, value-objects, services, ports, exceptions, factories)
+  - `application` (dto, use-cases, services)
+  - `infrastructure` (persistence/common/typeorm/prisma, services)
+  - `presentation` (controllers, dto, guards, filters, mappers)
+
+Décisions clés:
+
+- Aucune logique métier Lists n'est ajoutée à ce jalon pour isoler le changement structurel.
+- Les comportements Auth/Users restent inchangés.
+- Le squelette Lists suit exactement les conventions DDD + Hexagonal établies sur Auth et Users.
 
 ## Etape réalisée: Stabilisation E2E croisée Auth + Users
 

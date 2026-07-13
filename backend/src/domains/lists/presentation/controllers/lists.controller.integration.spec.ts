@@ -6,12 +6,12 @@ import request from 'supertest';
 
 jest.setTimeout(20000);
 
-describe('UsersController (integration)', () => {
+describe('ListsController (integration)', () => {
   let app: INestApplication;
   let ownerAccessToken: string;
-  let ownerUserId: string;
   let secondAccessToken: string;
-  let secondUserId: string;
+  let ownerListId: string;
+  let secondListId: string;
 
   beforeAll(async () => {
     process.env.PERSISTENCE_DRIVER = 'in-memory';
@@ -41,40 +41,26 @@ describe('UsersController (integration)', () => {
     const ownerRegister = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'users.owner@example.com',
+        email: 'lists.owner@example.com',
         password: 'Password123',
         firstName: 'Owner',
-        lastName: 'User',
+        lastName: 'List',
       })
       .expect(201);
 
     ownerAccessToken = ownerRegister.body.accessToken as string;
 
-    const ownerProfile = await request(app.getHttpServer())
-      .get('/users/me')
-      .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .expect(200);
-
-    ownerUserId = ownerProfile.body.id as string;
-
     const secondRegister = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'users.second@example.com',
+        email: 'lists.second@example.com',
         password: 'Password123',
         firstName: 'Second',
-        lastName: 'User',
+        lastName: 'List',
       })
       .expect(201);
 
     secondAccessToken = secondRegister.body.accessToken as string;
-
-    const secondProfile = await request(app.getHttpServer())
-      .get('/users/me')
-      .set('Authorization', `Bearer ${secondAccessToken}`)
-      .expect(200);
-
-    secondUserId = secondProfile.body.id as string;
   });
 
   afterAll(async () => {
@@ -83,85 +69,94 @@ describe('UsersController (integration)', () => {
     }
   });
 
-  it('gets own profile with /users/me', async () => {
+  it('creates list for authenticated user', async () => {
     const response = await request(app.getHttpServer())
-      .get('/users/me')
+      .post('/lists')
       .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .expect(200);
+      .send({ name: 'Personal' })
+      .expect(201);
 
-    expect(response.body.id).toBe(ownerUserId);
-    expect(response.body.email).toBe('users.owner@example.com');
-    expect(response.body.firstName).toBe('Owner');
-    expect(response.body.lastName).toBe('User');
+    expect(response.body.id).toBeDefined();
+    expect(response.body.ownerUserId).toBeDefined();
+    expect(response.body.name).toBe('Personal');
+    expect(response.body.createdAt).toBeDefined();
+    expect(response.body.updatedAt).toBeDefined();
+
+    ownerListId = response.body.id as string;
   });
 
-  it('returns 401 when token is missing', async () => {
-    await request(app.getHttpServer()).get('/users/me').expect(401);
-  });
-
-  it('returns 403 when accessing another user profile', async () => {
+  it('rejects duplicate list name for same owner', async () => {
     await request(app.getHttpServer())
-      .get(`/users/${secondUserId}`)
+      .post('/lists')
       .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .expect(403);
-  });
-
-  it('updates own user profile names', async () => {
-    const updateResponse = await request(app.getHttpServer())
-      .patch(`/users/${ownerUserId}`)
-      .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .send({
-        firstName: 'After',
-        lastName: 'Rename',
-      })
-      .expect(200);
-
-    expect(updateResponse.body.id).toBe(ownerUserId);
-    expect(updateResponse.body.firstName).toBe('After');
-    expect(updateResponse.body.lastName).toBe('Rename');
-  });
-
-  it('returns 403 when updating another user profile', async () => {
-    await request(app.getHttpServer())
-      .patch(`/users/${secondUserId}`)
-      .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .send({
-        firstName: 'After',
-        lastName: 'Rename',
-      })
-      .expect(403);
-  });
-
-  it('returns 400 for invalid update payload', async () => {
-    await request(app.getHttpServer())
-      .patch(`/users/${ownerUserId}`)
-      .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .send({
-        firstName: 'A',
-        lastName: '',
-      })
-      .expect(400);
-  });
-
-  it('returns 400 for invalid /users create payload', async () => {
-    await request(app.getHttpServer())
-      .post('/users')
-      .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .send({
-        firstName: 'A',
-        lastName: '',
-      })
-      .expect(400);
-  });
-
-  it('returns 409 when trying to create profile twice for same identity', async () => {
-    await request(app.getHttpServer())
-      .post('/users')
-      .set('Authorization', `Bearer ${ownerAccessToken}`)
-      .send({
-        firstName: 'Owner',
-        lastName: 'User',
-      })
+      .send({ name: 'Personal' })
       .expect(409);
+  });
+
+  it('allows same list name for another owner', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/lists')
+      .set('Authorization', `Bearer ${secondAccessToken}`)
+      .send({ name: 'Personal' })
+      .expect(201);
+
+    secondListId = response.body.id as string;
+  });
+
+  it('returns 400 for invalid create payload', async () => {
+    await request(app.getHttpServer())
+      .post('/lists')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .send({ name: '' })
+      .expect(400);
+  });
+
+  it('returns only authenticated user lists', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/lists')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body.length).toBeGreaterThanOrEqual(1);
+
+    const ownerNames = (response.body as Array<{ name: string }>).map(
+      (item) => item.name,
+    );
+
+    expect(ownerNames).toContain('Personal');
+  });
+
+  it('returns 401 when list token is missing', async () => {
+    await request(app.getHttpServer()).get('/lists').expect(401);
+  });
+
+  it('forbids deleting another user list', async () => {
+    await request(app.getHttpServer())
+      .delete(`/lists/${secondListId}`)
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(403);
+  });
+
+  it('deletes own list', async () => {
+    await request(app.getHttpServer())
+      .delete(`/lists/${ownerListId}`)
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(204);
+
+    const afterDelete = await request(app.getHttpServer())
+      .get('/lists')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(200);
+
+    const ids = (afterDelete.body as Array<{ id: string }>).map((item) => item.id);
+    expect(ids).not.toContain(ownerListId);
+  });
+
+  it('returns 404 when deleting non-existing list', async () => {
+    await request(app.getHttpServer())
+      .delete('/lists/4f067f7b-89f3-4f44-95a6-f4d2467627df')
+      .set('Authorization', `Bearer ${ownerAccessToken}`)
+      .expect(404);
   });
 });
