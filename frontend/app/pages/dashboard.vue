@@ -188,9 +188,10 @@
         Chargement des taches...
       </p>
 
-      <div v-else-if="selectedListId" class="mt-5 grid gap-3">
+      <div v-else-if="selectedListId" class="mt-5 space-y-4">
+        <div class="grid gap-3">
         <article
-          v-for="task in selectedTasks"
+          v-for="task in activeTasks"
           :key="task.id"
           class="rounded-2xl border p-4"
           :class="isDarkMode ? 'border-slate-700 bg-slate-950/45' : 'border-slate-200 bg-white/85'"
@@ -259,14 +260,97 @@
             </button>
           </div>
         </article>
+        </div>
 
         <article
-          v-if="selectedTasks.length === 0"
+          v-if="activeTasks.length === 0"
           class="rounded-2xl border border-dashed p-6 text-center text-sm"
           :class="isDarkMode ? 'border-slate-700 text-slate-300' : 'border-slate-300 text-slate-600'"
         >
-          Aucune tache pour cette liste.
+          Aucune tache en cours pour cette liste.
         </article>
+
+        <section class="rounded-2xl border p-4" :class="isDarkMode ? 'border-slate-700 bg-slate-950/45' : 'border-slate-200 bg-white/85'">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-base font-semibold">Mes taches terminees</h3>
+            <button
+              type="button"
+              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+              :class="isDarkMode
+                ? 'border-slate-600 bg-slate-900/50 text-slate-200 hover:bg-slate-800'
+                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'"
+              :aria-expanded="!isCompletedTasksCollapsed"
+              @click="toggleCompletedTasksSection"
+            >
+              {{ isCompletedTasksCollapsed ? 'Afficher' : 'Masquer' }} ({{ completedTasks.length }})
+            </button>
+          </div>
+
+          <div v-show="!isCompletedTasksCollapsed" class="mt-4 grid gap-3">
+            <article
+              v-for="task in completedTasks"
+              :key="task.id"
+              class="rounded-2xl border p-4"
+              :class="isDarkMode ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50/80'"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h4 class="text-base font-semibold">{{ task.shortDescription }}</h4>
+                  <p v-if="task.longDescription" class="mt-1 text-sm" :class="mutedClass">{{ task.longDescription }}</p>
+                  <p class="mt-2 text-xs" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">
+                    Echeance: {{ formatDate(task.dueDate) }}
+                  </p>
+                </div>
+                <span
+                  class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase"
+                  :class="isDarkMode ? 'border-emerald-300/50 bg-emerald-900/20 text-emerald-100' : 'border-emerald-400 bg-emerald-50 text-emerald-700'"
+                >
+                  Terminee
+                </span>
+              </div>
+
+              <div class="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                  :class="selectedTaskId === task.id
+                    ? (isDarkMode ? 'border-cyan-300/60 bg-cyan-900/20 text-cyan-100' : 'border-cyan-400 bg-cyan-50 text-cyan-700')
+                    : (isDarkMode ? 'border-slate-600 bg-slate-900/50 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100')"
+                  @click="openTaskDetails(task.id)"
+                >
+                  Details
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                  :class="isDarkMode ? 'border-amber-300/50 bg-amber-900/20 text-amber-100 hover:bg-amber-900/30' : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'"
+                  :disabled="!isOnline"
+                  @click="handleReopenTask(task.id)"
+                >
+                  Reouvrir
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                  :class="isDarkMode ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
+                  aria-label="Supprimer la tache"
+                  :disabled="!isOnline"
+                  @click="requestDeleteTask(task.id, task.shortDescription)"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </article>
+
+            <article
+              v-if="completedTasks.length === 0"
+              class="rounded-2xl border border-dashed p-6 text-center text-sm"
+              :class="isDarkMode ? 'border-slate-700 text-slate-300' : 'border-slate-300 text-slate-600'"
+            >
+              Aucune tache terminee pour cette liste.
+            </article>
+          </div>
+        </section>
       </div>
     </article>
 
@@ -422,6 +506,7 @@ const listName = ref('');
 const selectedListId = ref('');
 const selectedTaskId = ref('');
 const isLeftSidebarCollapsed = ref(false);
+const isCompletedTasksCollapsed = ref(true);
 const deleteConfirmation = ref<{
   kind: 'list' | 'task';
   id: string;
@@ -547,6 +632,14 @@ const selectedTasks = computed(() => {
   return getTasksForList(selectedListId.value).value;
 });
 
+const activeTasks = computed(() =>
+  selectedTasks.value.filter((task) => !isTaskCompleted(task))
+);
+
+const completedTasks = computed(() =>
+  selectedTasks.value.filter((task) => isTaskCompleted(task))
+);
+
 const selectedTask = computed(() =>
   selectedTasks.value.find((task) => task.id === selectedTaskId.value) ?? null
 );
@@ -595,12 +688,17 @@ function isSelectedList(listId: string): boolean {
 async function selectList(listId: string): Promise<void> {
   selectedListId.value = listId;
   selectedTaskId.value = '';
+  isCompletedTasksCollapsed.value = true;
   await loadTasks(listId);
   subscribeToList(listId);
 }
 
 function toggleLeftSidebar(): void {
   isLeftSidebarCollapsed.value = !isLeftSidebarCollapsed.value;
+}
+
+function toggleCompletedTasksSection(): void {
+  isCompletedTasksCollapsed.value = !isCompletedTasksCollapsed.value;
 }
 
 function openTaskDetails(taskId: string): void {

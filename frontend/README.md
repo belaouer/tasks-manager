@@ -24,6 +24,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Dashboard restructure en 3 zones (left/main/right) avec left sidebar retractable.
 - Right sidebar detail de tache activee sur selection d'une tache.
 - Modales de confirmation de suppression (liste et tache) implementees.
+- Section dediee Mes taches terminees implementee (repliee par defaut, depliable).
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
@@ -158,7 +159,7 @@ P0 - Critique (alignement direct cahier)
 2. Page principale 3 zones: fait (left sidebar retractable + main content + right sidebar detail).
 3. Right sidebar detail tache: fait (selection, details complets, action suppression sans modale).
 4. Modales de confirmation suppression: fait (liste avec warning cascade + tache).
-5. Ajouter la section "Mes taches terminees" dediee, repliee par defaut et depliable.
+5. Ajouter la section "Mes taches terminees" dediee, repliee par defaut et depliable: fait.
 
 P1 - Important (qualite produit / robustesse)
 
