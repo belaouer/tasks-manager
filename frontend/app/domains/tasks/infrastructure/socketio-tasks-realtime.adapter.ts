@@ -4,6 +4,7 @@ import type {
   TaskDeletedEvent,
   TasksRealtimeEventHandlers
 } from '../domain/tasks-realtime-events';
+import type { TasksRealtimeLifecycleHandlers } from '../domain/tasks-realtime-lifecycle';
 import { TasksRealtimePort } from '../domain/tasks-realtime.port';
 
 export class SocketIoTasksRealtimeAdapter extends TasksRealtimePort {
@@ -57,6 +58,27 @@ export class SocketIoTasksRealtimeAdapter extends TasksRealtimePort {
     });
     this.socket.on('task:deleted', (payload: TaskDeletedEvent) => {
       handlers.onTaskDeleted(payload);
+    });
+  }
+
+  onLifecycle(handlers: TasksRealtimeLifecycleHandlers): void {
+    if (!this.socket) {
+      return;
+    }
+
+    handlers.onConnecting();
+
+    this.socket.on('connect', () => {
+      handlers.onConnected();
+    });
+    this.socket.io.on('reconnect_attempt', () => {
+      handlers.onReconnecting();
+    });
+    this.socket.on('disconnect', () => {
+      handlers.onDisconnected();
+    });
+    this.socket.on('connect_error', () => {
+      handlers.onError();
     });
   }
 

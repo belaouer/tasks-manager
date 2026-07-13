@@ -1,4 +1,5 @@
 import type { TasksRealtimeEventHandlers } from './tasks-realtime-events';
+import type { TasksRealtimeLifecycleHandlers } from './tasks-realtime-lifecycle';
 
 export abstract class TasksRealtimePort {
   abstract connect(accessToken: string): void;
@@ -10,6 +11,8 @@ export abstract class TasksRealtimePort {
   abstract leaveList(listId: string): void;
 
   abstract onEvents(handlers: TasksRealtimeEventHandlers): void;
+
+  abstract onLifecycle(handlers: TasksRealtimeLifecycleHandlers): void;
 
   abstract removeAllListeners(): void;
 }

@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useAuthSession } from '~/domains/auth/application/use-auth-session';
 import type { TaskSummary } from '../domain/task-summary';
 import type { TaskDeletedEvent } from '../domain/tasks-realtime-events';
+import type { TasksRealtimeStatus } from '../domain/tasks-realtime-lifecycle';
 import { SocketIoTasksRealtimeAdapter } from '../infrastructure/socketio-tasks-realtime.adapter';
 
 interface UseTasksRealtimeDependencies {
@@ -16,6 +17,13 @@ interface UseTasksRealtimeDependencies {
       onTaskCompleted: (task: TaskSummary) => void;
       onTaskDeleted: (payload: TaskDeletedEvent) => void;
     }): void;
+    onLifecycle(handlers: {
+      onConnecting: () => void;
+      onConnected: () => void;
+      onReconnecting: () => void;
+      onDisconnected: () => void;
+      onError: () => void;
+    }): void;
     removeAllListeners(): void;
   };
   readonly getAccessToken?: () => string;
@@ -26,6 +34,7 @@ interface UseTasksRealtimeDependencies {
 const REALTIME_CONNECTED_KEY = 'tasks-manager.tasks.realtime.connected';
 const REALTIME_LIST_KEY = 'tasks-manager.tasks.realtime.list';
 const REALTIME_BOUND_KEY = 'tasks-manager.tasks.realtime.bound';
+const REALTIME_STATUS_KEY = 'tasks-manager.tasks.realtime.status';
 
 const defaultAdapter = new SocketIoTasksRealtimeAdapter();
 
@@ -37,6 +46,7 @@ export function useTasksRealtime(deps: UseTasksRealtimeDependencies) {
   const isConnected = useState<boolean>(REALTIME_CONNECTED_KEY, () => false);
   const activeListId = useState<string>(REALTIME_LIST_KEY, () => '');
   const listenersBound = useState<boolean>(REALTIME_BOUND_KEY, () => false);
+  const status = useState<TasksRealtimeStatus>(REALTIME_STATUS_KEY, () => 'idle');
 
   function ensureConnected(): boolean {
     const token = getAccessToken();
@@ -47,6 +57,7 @@ export function useTasksRealtime(deps: UseTasksRealtimeDependencies) {
     if (!isConnected.value) {
       realtimeAdapter.connect(token);
       isConnected.value = true;
+      status.value = 'connecting';
     }
 
     return true;
@@ -63,6 +74,28 @@ export function useTasksRealtime(deps: UseTasksRealtimeDependencies) {
       onTaskCompleted: (task) => deps.onTaskUpsert(task),
       onTaskDeleted: (payload) => deps.onTaskDeleted(payload)
     });
+
+    realtimeAdapter.onLifecycle({
+      onConnecting: () => {
+        status.value = 'connecting';
+      },
+      onConnected: () => {
+        status.value = 'connected';
+        if (activeListId.value.length > 0) {
+          realtimeAdapter.joinList(activeListId.value);
+        }
+      },
+      onReconnecting: () => {
+        status.value = 'reconnecting';
+      },
+      onDisconnected: () => {
+        status.value = 'disconnected';
+      },
+      onError: () => {
+        status.value = 'error';
+      }
+    });
+
     listenersBound.value = true;
   }
 
@@ -91,10 +124,12 @@ export function useTasksRealtime(deps: UseTasksRealtimeDependencies) {
     activeListId.value = '';
     isConnected.value = false;
     listenersBound.value = false;
+    status.value = 'idle';
   }
 
   return {
     isConnected: computed(() => isConnected.value),
+    status: computed(() => status.value),
     activeListId: computed(() => activeListId.value),
     subscribeToList,
     stop
