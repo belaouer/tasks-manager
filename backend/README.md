@@ -115,7 +115,36 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la finalisation de la branche Tasks (revue finale + merge vers main).
+1. Ajouter les tests d'intégration WebSocket (handshake JWT + join/leave room + réception d'événements) et finaliser la phase temps réel.
+
+## Etape réalisée: Socle WebSocket temps réel Tasks
+
+Eléments implémentés:
+
+- Dépendances WebSocket ajoutées:
+  - `@nestjs/websockets`
+  - `@nestjs/platform-socket.io`
+  - `socket.io`
+- Gateway Socket.IO `TasksGateway`:
+  - namespace `/tasks`
+  - vérification JWT au handshake (`HS256`, issuer, audience)
+  - refus des connexions anonymes/invalides
+  - gestion des rooms par liste via événements `lists:join` et `lists:leave`
+- Emetteur temps réel central `TasksRealtimeEmitterService`.
+- Port applicatif `TasksRealtimePublisherPort` + adapter `SocketIoTasksRealtimePublisherAdapter`.
+- Emission des événements serveur depuis les use cases Tasks:
+  - `task:created` (CreateTaskUseCase)
+  - `task:completed` (CompleteTaskUseCase)
+  - `task:updated` (ReopenTaskUseCase)
+  - `task:deleted` (DeleteTaskUseCase)
+- Branchement complet dans `TasksModule` (gateway + emitter + binding du port publisher).
+- Tests unitaires Tasks mis à jour pour valider l'émission des événements sur les use cases concernés.
+
+Décisions clés:
+
+- L'émission temps réel est pilotée par un port applicatif pour conserver l'inversion de dépendance.
+- Les use cases restent indépendants de Socket.IO: ils publient via contrat abstrait uniquement.
+- Le gateway gère uniquement les préoccupations transport/auth/rooms, sans logique métier.
 
 ## Etape réalisée: E2E global inter-domaines avec Tasks
 

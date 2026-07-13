@@ -3,13 +3,17 @@ import { DeleteTaskCommand } from '../dto/delete-task.command';
 import { TaskAccessDeniedApplicationException } from '../exceptions/task-access-denied.application-exception';
 import { TaskNotFoundApplicationException } from '../exceptions/task-not-found.application-exception';
 import { TasksRepositoryPort } from '../../domain/ports/tasks-repository.port';
+import { TasksRealtimePublisherPort } from '../ports/tasks-realtime-publisher.port';
 import { TaskId } from '../../domain/value-objects/task-id.value-object';
 import { TaskListId } from '../../domain/value-objects/task-list-id.value-object';
 import { TaskOwnerUserId } from '../../domain/value-objects/task-owner-user-id.value-object';
 
 @Injectable()
 export class DeleteTaskUseCase {
-  constructor(private readonly tasksRepository: TasksRepositoryPort) {}
+  constructor(
+    private readonly tasksRepository: TasksRepositoryPort,
+    private readonly tasksRealtimePublisher: TasksRealtimePublisherPort,
+  ) {}
 
   async execute(command: DeleteTaskCommand): Promise<void> {
     const ownerUserId = TaskOwnerUserId.create(command.ownerUserId);
@@ -29,5 +33,10 @@ export class DeleteTaskUseCase {
     }
 
     await this.tasksRepository.deleteById(taskId);
+    await this.tasksRealtimePublisher.publishTaskDeleted({
+      taskId: taskId.getValue(),
+      listId: listId.getValue(),
+      ownerUserId: ownerUserId.getValue(),
+    });
   }
 }

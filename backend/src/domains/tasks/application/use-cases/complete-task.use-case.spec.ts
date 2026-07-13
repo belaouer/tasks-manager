@@ -1,4 +1,5 @@
 import { CompleteTaskCommand } from '../dto/complete-task.command';
+import { TasksRealtimePublisherPort } from '../ports/tasks-realtime-publisher.port';
 import { CompleteTaskUseCase } from './complete-task.use-case';
 import { TaskAccessDeniedApplicationException } from '../exceptions/task-access-denied.application-exception';
 import { TaskNotFoundApplicationException } from '../exceptions/task-not-found.application-exception';
@@ -49,9 +50,24 @@ class FixedClock extends TasksClockPort {
   }
 }
 
+class FakeRealtimePublisher extends TasksRealtimePublisherPort {
+  completedTaskId: string | null = null;
+
+  async publishTaskCreated(): Promise<void> {}
+
+  async publishTaskUpdated(): Promise<void> {}
+
+  async publishTaskCompleted(task: { id: string }): Promise<void> {
+    this.completedTaskId = task.id;
+  }
+
+  async publishTaskDeleted(): Promise<void> {}
+}
+
 describe('CompleteTaskUseCase', () => {
   it('completes a task owned by the user for the list', async () => {
     const repository = new InMemoryTasksRepository();
+    const realtimePublisher = new FakeRealtimePublisher();
 
     await repository.save(
       Task.createNew({
@@ -65,19 +81,25 @@ describe('CompleteTaskUseCase', () => {
       }),
     );
 
-    const useCase = new CompleteTaskUseCase(repository, new FixedClock());
+    const useCase = new CompleteTaskUseCase(
+      repository,
+      new FixedClock(),
+      realtimePublisher,
+    );
     const result = await useCase.execute(
       new CompleteTaskCommand('owner-1', 'list-1', 'task-1'),
     );
 
     expect(result.completed).toBe(true);
     expect(result.completedAt).toEqual(new Date('2026-04-06T00:00:00.000Z'));
+    expect(realtimePublisher.completedTaskId).toBe('task-1');
   });
 
   it('fails when task does not exist', async () => {
     const useCase = new CompleteTaskUseCase(
       new InMemoryTasksRepository(),
       new FixedClock(),
+      new FakeRealtimePublisher(),
     );
 
     await expect(
@@ -100,7 +122,11 @@ describe('CompleteTaskUseCase', () => {
       }),
     );
 
-    const useCase = new CompleteTaskUseCase(repository, new FixedClock());
+    const useCase = new CompleteTaskUseCase(
+      repository,
+      new FixedClock(),
+      new FakeRealtimePublisher(),
+    );
 
     await expect(
       useCase.execute(new CompleteTaskCommand('owner-2', 'list-1', 'task-1')),

@@ -1,4 +1,5 @@
 import { CreateTaskCommand } from '../dto/create-task.command';
+import { TasksRealtimePublisherPort } from '../ports/tasks-realtime-publisher.port';
 import { CreateTaskUseCase } from './create-task.use-case';
 import { Task } from '../../domain/entities/task.entity';
 import { TasksClockPort } from '../../domain/ports/tasks-clock.port';
@@ -54,12 +55,28 @@ class FixedIdGenerator extends TasksIdGeneratorPort {
   }
 }
 
+class FakeRealtimePublisher extends TasksRealtimePublisherPort {
+  lastCreatedTaskId: string | null = null;
+
+  async publishTaskCreated(task: { id: string }): Promise<void> {
+    this.lastCreatedTaskId = task.id;
+  }
+
+  async publishTaskUpdated(): Promise<void> {}
+
+  async publishTaskCompleted(): Promise<void> {}
+
+  async publishTaskDeleted(): Promise<void> {}
+}
+
 describe('CreateTaskUseCase', () => {
   it('creates a task', async () => {
+    const realtimePublisher = new FakeRealtimePublisher();
     const useCase = new CreateTaskUseCase(
       new InMemoryTasksRepository(),
       new FixedClock(),
       new FixedIdGenerator(),
+      realtimePublisher,
     );
 
     const result = await useCase.execute(
@@ -79,13 +96,16 @@ describe('CreateTaskUseCase', () => {
     expect(result.longDescription).toBe('Remember lactose free');
     expect(result.completed).toBe(false);
     expect(result.completedAt).toBeNull();
+    expect(realtimePublisher.lastCreatedTaskId).toBe('task-1');
   });
 
   it('normalizes empty long description as null', async () => {
+    const realtimePublisher = new FakeRealtimePublisher();
     const useCase = new CreateTaskUseCase(
       new InMemoryTasksRepository(),
       new FixedClock(),
       new FixedIdGenerator(),
+      realtimePublisher,
     );
 
     const result = await useCase.execute(

@@ -1,4 +1,5 @@
 import { ReopenTaskCommand } from '../dto/reopen-task.command';
+import { TasksRealtimePublisherPort } from '../ports/tasks-realtime-publisher.port';
 import { ReopenTaskUseCase } from './reopen-task.use-case';
 import { Task } from '../../domain/entities/task.entity';
 import { TasksClockPort } from '../../domain/ports/tasks-clock.port';
@@ -47,9 +48,24 @@ class FixedClock extends TasksClockPort {
   }
 }
 
+class FakeRealtimePublisher extends TasksRealtimePublisherPort {
+  updatedTaskId: string | null = null;
+
+  async publishTaskCreated(): Promise<void> {}
+
+  async publishTaskUpdated(task: { id: string }): Promise<void> {
+    this.updatedTaskId = task.id;
+  }
+
+  async publishTaskCompleted(): Promise<void> {}
+
+  async publishTaskDeleted(): Promise<void> {}
+}
+
 describe('ReopenTaskUseCase', () => {
   it('reopens a completed task', async () => {
     const repository = new InMemoryTasksRepository();
+    const realtimePublisher = new FakeRealtimePublisher();
 
     const completedTask = Task.createNew({
       id: TaskId.create('task-1'),
@@ -63,7 +79,11 @@ describe('ReopenTaskUseCase', () => {
 
     await repository.save(completedTask);
 
-    const useCase = new ReopenTaskUseCase(repository, new FixedClock());
+    const useCase = new ReopenTaskUseCase(
+      repository,
+      new FixedClock(),
+      realtimePublisher,
+    );
     const result = await useCase.execute(
       new ReopenTaskCommand('owner-1', 'list-1', 'task-1'),
     );
@@ -71,5 +91,6 @@ describe('ReopenTaskUseCase', () => {
     expect(result.completed).toBe(false);
     expect(result.completedAt).toBeNull();
     expect(result.updatedAt).toEqual(new Date('2026-04-07T00:00:00.000Z'));
+    expect(realtimePublisher.updatedTaskId).toBe('task-1');
   });
 });
