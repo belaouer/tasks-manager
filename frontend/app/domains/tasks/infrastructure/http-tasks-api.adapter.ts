@@ -8,17 +8,16 @@ function createAuthorizedHeaders(accessToken: string): HeadersInit {
 }
 
 export class HttpTasksApiAdapter extends TasksApiPort {
-  private get baseUrl(): string {
-    const config = useRuntimeConfig();
-    return config.public.apiBaseUrl;
+  private get api() {
+    const { $api } = useNuxtApp();
+    return $api;
   }
 
   async getListTasks(
     accessToken: string,
     listId: string
   ): Promise<readonly TaskSummary[]> {
-    return $fetch<readonly TaskSummary[]>(`/lists/${listId}/tasks`, {
-      baseURL: this.baseUrl,
+    return this.api<readonly TaskSummary[]>(`/lists/${listId}/tasks`, {
       method: 'GET',
       headers: createAuthorizedHeaders(accessToken)
     });
@@ -29,8 +28,7 @@ export class HttpTasksApiAdapter extends TasksApiPort {
     listId: string,
     payload: CreateTaskPayload
   ): Promise<TaskSummary> {
-    return $fetch<TaskSummary>(`/lists/${listId}/tasks`, {
-      baseURL: this.baseUrl,
+    return this.api<TaskSummary>(`/lists/${listId}/tasks`, {
       method: 'POST',
       headers: createAuthorizedHeaders(accessToken),
       body: payload
@@ -42,8 +40,7 @@ export class HttpTasksApiAdapter extends TasksApiPort {
     listId: string,
     taskId: string
   ): Promise<TaskSummary> {
-    return $fetch<TaskSummary>(`/lists/${listId}/tasks/${taskId}/complete`, {
-      baseURL: this.baseUrl,
+    return this.api<TaskSummary>(`/lists/${listId}/tasks/${taskId}/complete`, {
       method: 'PATCH',
       headers: createAuthorizedHeaders(accessToken)
     });
@@ -54,8 +51,7 @@ export class HttpTasksApiAdapter extends TasksApiPort {
     listId: string,
     taskId: string
   ): Promise<TaskSummary> {
-    return $fetch<TaskSummary>(`/lists/${listId}/tasks/${taskId}/reopen`, {
-      baseURL: this.baseUrl,
+    return this.api<TaskSummary>(`/lists/${listId}/tasks/${taskId}/reopen`, {
       method: 'PATCH',
       headers: createAuthorizedHeaders(accessToken)
     });
@@ -66,8 +62,7 @@ export class HttpTasksApiAdapter extends TasksApiPort {
     listId: string,
     taskId: string
   ): Promise<void> {
-    await $fetch(`/lists/${listId}/tasks/${taskId}`, {
-      baseURL: this.baseUrl,
+    await this.api(`/lists/${listId}/tasks/${taskId}`, {
       method: 'DELETE',
       headers: createAuthorizedHeaders(accessToken)
     });
