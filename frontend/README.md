@@ -1,75 +1,67 @@
-# Nuxt Minimal Starter
+# Frontend - Tasks Manager (Nuxt 4)
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Ce frontend est la couche presentation du projet Tasks Manager.
+Il demarre par une fondation UI claire, responsive et maintenable, avant integration progressive des flux metier.
 
-## Setup
+## Etat actuel
 
-Make sure to install dependencies:
+- Socle Nuxt 4 operationnel.
+- Layout global en place.
+- Page d'accueil de fondation frontend.
+- Styles globaux avec variables CSS, animations legeres et responsive mobile/desktop.
+
+## Arborescence active
+
+```text
+app/
+	app.vue
+	assets/
+		css/
+			main.css
+	domains/
+		landing/
+			domain/
+			application/
+	layouts/
+		default.vue
+	pages/
+		index.vue
+```
+
+Regle DDD frontend appliquee:
+
+- UI dans `app/pages`.
+- Metier frontend dans `app/domains`.
+- Les pages consomment les use cases frontend sans porter la logique metier.
+
+## Choix techniques
+
+- Nuxt 4 + Vue 3 pour SSR/SPA moderne et conventions de structure robustes.
+- Layout centralise pour stabiliser la shell applicative avant ajout des ecrans metier.
+- Variables CSS pour un theme coherent et evolutif.
+- Animations d'entree discretes pour donner de la lisibilite sans surcharger l'UX.
+
+## Lancer le frontend
 
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+Le serveur dev est disponible sur http://localhost:3000.
 
-Build the application for production:
+## Build production
 
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Prochaine etape
+
+Implementer le module Auth frontend:
+
+- pages login/register,
+- client API auth,
+- gestion session/cookies,
+- guards de navigation.
