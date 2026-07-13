@@ -115,7 +115,26 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Mettre à jour les tests E2E globaux pour couvrir Lists dans un scénario inter-domaines complet.
+1. Préparer la finalisation de la branche Lists (revue finale + merge vers main).
+
+## Etape réalisée: E2E global inter-domaines avec Lists
+
+Eléments implémentés:
+
+- Le scénario E2E global couvre désormais Auth + Users + Lists.
+- Extension de `test/app.e2e-spec.ts` avec un parcours complet Lists:
+  - création de deux identités via Auth,
+  - création de listes,
+  - vérification de conflit de nom sur même propriétaire (409),
+  - vérification d'isolation des listes entre utilisateurs,
+  - vérification de suppression cross-user interdite (403),
+  - suppression propriétaire (204) et vérification post-suppression.
+
+Décisions clés:
+
+- Le scénario est construit en mode boîte noire HTTP pour valider le comportement réel inter-domaines.
+- L'environnement E2E reste en `in-memory` pour conserver la rapidité et la stabilité des exécutions.
+- Le test complète les validations d'intégration module par module en apportant une preuve bout-en-bout.
 
 ## Etape réalisée: Presentation Lists + tests d'intégration
 

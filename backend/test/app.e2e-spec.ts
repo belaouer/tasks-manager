@@ -3,7 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 
-describe('Auth + Users (e2e)', () => {
+describe('Auth + Users + Lists (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -149,6 +149,86 @@ describe('Auth + Users (e2e)', () => {
       .get(`/users/${secondId}`)
       .set('Authorization', bearer(ownerAccessToken))
       .expect(403);
+  });
+
+  it('register -> lists create/read/delete ownership flow', async () => {
+    const ownerRegisterResponse = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'lists-owner.e2e@example.com',
+        password: 'Password123',
+        firstName: 'ListsOwner',
+        lastName: 'E2E',
+      })
+      .expect(201);
+
+    const ownerAccessToken = ownerRegisterResponse.body.accessToken as string;
+
+    const secondRegisterResponse = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'lists-second.e2e@example.com',
+        password: 'Password123',
+        firstName: 'ListsSecond',
+        lastName: 'E2E',
+      })
+      .expect(201);
+
+    const secondAccessToken = secondRegisterResponse.body.accessToken as string;
+
+    const ownerCreateResponse = await request(app.getHttpServer())
+      .post('/lists')
+      .set('Authorization', bearer(ownerAccessToken))
+      .send({ name: 'Personal' })
+      .expect(201);
+
+    const ownerListId = ownerCreateResponse.body.id as string;
+    expect(ownerCreateResponse.body.name).toBe('Personal');
+
+    await request(app.getHttpServer())
+      .post('/lists')
+      .set('Authorization', bearer(ownerAccessToken))
+      .send({ name: 'Personal' })
+      .expect(409);
+
+    const secondCreateResponse = await request(app.getHttpServer())
+      .post('/lists')
+      .set('Authorization', bearer(secondAccessToken))
+      .send({ name: 'Personal' })
+      .expect(201);
+
+    const secondListId = secondCreateResponse.body.id as string;
+
+    const ownerListsResponse = await request(app.getHttpServer())
+      .get('/lists')
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    const ownerListIds = (ownerListsResponse.body as Array<{ id: string }>).map(
+      (item) => item.id,
+    );
+    expect(ownerListIds).toContain(ownerListId);
+    expect(ownerListIds).not.toContain(secondListId);
+
+    await request(app.getHttpServer())
+      .delete(`/lists/${secondListId}`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/lists/${ownerListId}`)
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(204);
+
+    const ownerListsAfterDeleteResponse = await request(app.getHttpServer())
+      .get('/lists')
+      .set('Authorization', bearer(ownerAccessToken))
+      .expect(200);
+
+    const ownerListIdsAfterDelete = (
+      ownerListsAfterDeleteResponse.body as Array<{ id: string }>
+    ).map((item) => item.id);
+    expect(ownerListIdsAfterDelete).not.toContain(ownerListId);
   });
 });
 
