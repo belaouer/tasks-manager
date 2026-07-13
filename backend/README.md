@@ -115,7 +115,54 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Préparer la finalisation de la branche temps réel (revue finale + merge vers main).
+1. Préparer la finalisation de la branche Docker backend (revue finale + merge vers main).
+
+## Etape réalisée: Docker Compose backend + PostgreSQL
+
+Eléments implémentés:
+
+- Ajout d'un `docker-compose.yml` à la racine du workspace avec:
+  - service `postgres` (PostgreSQL 16 + volume persistant + healthcheck)
+  - service `backend` (build via `backend/Dockerfile`)
+- Configuration des variables backend pour l'exécution conteneurisée:
+  - `PERSISTENCE_DRIVER=prisma`
+  - `DATABASE_URL=postgresql://postgres:postgres@postgres:5432/tasks_manager`
+
+Décisions clés:
+
+- Le compose orchestre backend et base relationnelle dans un même réseau Docker.
+- Le backend attend explicitement que PostgreSQL soit healthy avant démarrage.
+- La persistance PostgreSQL est conservée via volume nommé `postgres_data`.
+
+Commandes Docker Compose:
+
+- Démarrage:
+  - `docker compose up --build`
+- Arrêt:
+  - `docker compose down`
+
+## Etape réalisée: Dockerisation du backend
+
+Eléments implémentés:
+
+- Ajout d'un `Dockerfile` backend multi-stage:
+  - stage `deps` (installation dépendances + `prisma generate`)
+  - stage `build` (compilation NestJS + prune des dépendances dev)
+  - stage `runtime` (image d'exécution minimale)
+- Ajout d'un `.dockerignore` backend pour réduire le contexte de build et accélérer la construction d'image.
+
+Décisions clés:
+
+- Le build multi-stage réduit la taille de l'image finale et isole les responsabilités build/runtime.
+- Le client Prisma est généré au build pour garantir la cohérence runtime.
+- Le runtime démarre uniquement `dist/main` avec `NODE_ENV=production`.
+
+Commandes Docker backend:
+
+- Build image:
+  - `docker build -t tasks-manager-backend ./backend`
+- Run conteneur:
+  - `docker run --rm -p 3000:3000 --env-file backend/.env.example tasks-manager-backend`
 
 ## Etape réalisée: Tests d'intégration WebSocket Tasks
 
