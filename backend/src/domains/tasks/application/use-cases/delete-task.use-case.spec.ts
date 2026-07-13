@@ -1,4 +1,5 @@
 import { DeleteTaskCommand } from '../dto/delete-task.command';
+import { TasksRealtimePublisherPort } from '../ports/tasks-realtime-publisher.port';
 import { DeleteTaskUseCase } from './delete-task.use-case';
 import { TaskAccessDeniedApplicationException } from '../exceptions/task-access-denied.application-exception';
 import { TaskNotFoundApplicationException } from '../exceptions/task-not-found.application-exception';
@@ -42,9 +43,24 @@ class InMemoryTasksRepository extends TasksRepositoryPort {
   }
 }
 
+class FakeRealtimePublisher extends TasksRealtimePublisherPort {
+  deletedTaskId: string | null = null;
+
+  async publishTaskCreated(): Promise<void> {}
+
+  async publishTaskUpdated(): Promise<void> {}
+
+  async publishTaskCompleted(): Promise<void> {}
+
+  async publishTaskDeleted(payload: { taskId: string }): Promise<void> {
+    this.deletedTaskId = payload.taskId;
+  }
+}
+
 describe('DeleteTaskUseCase', () => {
   it('deletes task when owner and list match', async () => {
     const repository = new InMemoryTasksRepository();
+    const realtimePublisher = new FakeRealtimePublisher();
 
     await repository.save(
       Task.createNew({
@@ -58,15 +74,19 @@ describe('DeleteTaskUseCase', () => {
       }),
     );
 
-    const useCase = new DeleteTaskUseCase(repository);
+    const useCase = new DeleteTaskUseCase(repository, realtimePublisher);
     await useCase.execute(new DeleteTaskCommand('owner-1', 'list-1', 'task-1'));
 
     const task = await repository.findById(TaskId.create('task-1'));
     expect(task).toBeNull();
+    expect(realtimePublisher.deletedTaskId).toBe('task-1');
   });
 
   it('fails when task does not exist', async () => {
-    const useCase = new DeleteTaskUseCase(new InMemoryTasksRepository());
+    const useCase = new DeleteTaskUseCase(
+      new InMemoryTasksRepository(),
+      new FakeRealtimePublisher(),
+    );
 
     await expect(
       useCase.execute(new DeleteTaskCommand('owner-1', 'list-1', 'unknown')),
@@ -88,7 +108,10 @@ describe('DeleteTaskUseCase', () => {
       }),
     );
 
-    const useCase = new DeleteTaskUseCase(repository);
+    const useCase = new DeleteTaskUseCase(
+      repository,
+      new FakeRealtimePublisher(),
+    );
 
     await expect(
       useCase.execute(new DeleteTaskCommand('owner-2', 'list-1', 'task-1')),

@@ -5,6 +5,7 @@ import { TaskAccessDeniedApplicationException } from '../exceptions/task-access-
 import { TaskNotFoundApplicationException } from '../exceptions/task-not-found.application-exception';
 import { TasksClockPort } from '../../domain/ports/tasks-clock.port';
 import { TasksRepositoryPort } from '../../domain/ports/tasks-repository.port';
+import { TasksRealtimePublisherPort } from '../ports/tasks-realtime-publisher.port';
 import { TaskId } from '../../domain/value-objects/task-id.value-object';
 import { TaskListId } from '../../domain/value-objects/task-list-id.value-object';
 import { TaskOwnerUserId } from '../../domain/value-objects/task-owner-user-id.value-object';
@@ -14,6 +15,7 @@ export class ReopenTaskUseCase {
   constructor(
     private readonly tasksRepository: TasksRepositoryPort,
     private readonly tasksClock: TasksClockPort,
+    private readonly tasksRealtimePublisher: TasksRealtimePublisherPort,
   ) {}
 
   async execute(command: ReopenTaskCommand): Promise<TaskSummaryDto> {
@@ -36,7 +38,7 @@ export class ReopenTaskUseCase {
     const updatedTask = task.reopen(this.tasksClock.now());
     await this.tasksRepository.update(updatedTask);
 
-    return new TaskSummaryDto(
+    const summary = new TaskSummaryDto(
       updatedTask.getId().getValue(),
       updatedTask.getListId().getValue(),
       updatedTask.getOwnerUserId().getValue(),
@@ -48,5 +50,9 @@ export class ReopenTaskUseCase {
       updatedTask.getCompletedAt(),
       updatedTask.isCompleted(),
     );
+
+    await this.tasksRealtimePublisher.publishTaskUpdated(summary);
+
+    return summary;
   }
 }
