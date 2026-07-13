@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { ListSummary } from '../domain/list-summary';
+import {
+  createInitialPendingMutationSyncState,
+  type PendingMutationSyncState
+} from '~/shared/sync/mutation-sync';
 
 export interface PendingListCreateOperation {
   readonly operationId: string;
@@ -25,11 +29,13 @@ export const useListsStore = defineStore('lists', () => {
   const isLoading = ref(false);
   const errorMessage = ref('');
   const pendingMutationQueue = ref<readonly PendingListMutationOperation[]>([]);
+  const syncState = ref<PendingMutationSyncState>(createInitialPendingMutationSyncState());
 
   return {
     lists,
     isLoading,
     errorMessage,
-    pendingMutationQueue
+    pendingMutationQueue,
+    syncState
   };
 });

@@ -28,6 +28,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Section dediee Mes taches terminees implementee (repliee par defaut, depliable).
 - Intercepteur HTTP centralise via client API Nuxt: refresh transparent sur 401 + retry + redirection login en cas d'echec refresh.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
+- Hardening de la synchro offline: retry differe avec backoff exponentiel et messages d'etat plus riches pour les files Lists/Tasks.
 
 ## Arborescence active
 
@@ -169,7 +170,7 @@ P1 - Important (qualite produit / robustesse)
 2. Finaliser le mode offline write-behind pour toutes les mutations (pas seulement creation), avec strategie de retry/exponential backoff et remontes d'etat utilisateur claires.
 	- couverture Tasks hors ligne: faite.
 	- couverture Lists hors ligne: faite.
-	- reste a industrialiser: retry/exponential backoff + messages d'etat plus riches.
+	- reste a industrialiser: monitoring plus pousse et resilience multi-tentatives plus fine.
 3. Renforcer les tests e2e sur les exigences UI du cahier:
 	detail sidebar, section terminees, modales, cas token expire et redirection login.
 

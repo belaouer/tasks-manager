@@ -135,4 +135,59 @@ describe('useLists integration', () => {
     expect(lists.lists.value).toHaveLength(0);
     expect(lists.errorMessage.value).toBe('');
   });
+
+  it('backs off and retries queued list mutations after a transient failure', async () => {
+    vi.useFakeTimers();
+
+    try {
+      useAuthStore().accessToken = 'access-token';
+      let online = false;
+      let createAttempts = 0;
+
+      const created = {
+        id: 'list-2',
+        ownerUserId: 'user-1',
+        name: 'Backlog',
+        createdAt: '2026-07-12T10:00:00.000Z',
+        updatedAt: '2026-07-12T10:00:00.000Z'
+      };
+
+      const listsApi = {
+        getLists: vi.fn(async () => []),
+        createList: vi.fn(async () => {
+          createAttempts += 1;
+          if (createAttempts === 1) {
+            throw new Error('transient-failure');
+          }
+
+          return created;
+        }),
+        deleteList: vi.fn(async () => undefined)
+      };
+
+      const lists = useLists({
+        isOnline: () => online,
+        listsApi
+      });
+
+      const queuedCreate = await lists.createList('Backlog');
+      expect(queuedCreate).toBe(true);
+
+      online = true;
+      await lists.flushPendingMutations();
+
+      expect(listsApi.createList).toHaveBeenCalledTimes(1);
+      expect(lists.pendingSyncCount.value).toBe(1);
+      expect(lists.errorMessage.value).toBe('Synchronisation des listes en attente: nouvelle tentative dans 2 secondes.');
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(listsApi.createList).toHaveBeenCalledTimes(2);
+      expect(lists.pendingSyncCount.value).toBe(0);
+      expect(lists.errorMessage.value).toBe('');
+      expect(lists.lists.value[0]?.id).toBe('list-2');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

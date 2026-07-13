@@ -8,6 +8,11 @@ import {
   type PendingTaskMutationOperation,
   useTasksStore
 } from '../infrastructure/tasks.store';
+import {
+  buildPendingMutationSyncMessage,
+  recordPendingMutationSyncFailure,
+  recordPendingMutationSyncSuccess
+} from '~/shared/sync/mutation-sync';
 const HTTP_CONFLICT_STATUS = 409;
 
 interface UseTasksDependencies {
@@ -39,9 +44,31 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     });
   const isOnline = deps.isOnline ?? (() => (!import.meta.client ? true : navigator.onLine));
   const tasksApi = deps.tasksApi ?? defaultApi;
+  let pendingRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   function resetError(): void {
     store.errorMessage = '';
+  }
+
+  function clearPendingRetryTimer(): void {
+    if (pendingRetryTimer) {
+      clearTimeout(pendingRetryTimer);
+      pendingRetryTimer = null;
+    }
+  }
+
+  function schedulePendingRetry(): void {
+    clearPendingRetryTimer();
+
+    if (store.pendingMutationQueue.length === 0 || store.syncState.nextRetryAt === null) {
+      return;
+    }
+
+    const delayMs = Math.max(0, new Date(store.syncState.nextRetryAt).getTime() - Date.now());
+    pendingRetryTimer = setTimeout(() => {
+      pendingRetryTimer = null;
+      void flushPendingMutations();
+    }, delayMs);
   }
 
   function readListTasks(listId: string): readonly TaskSummary[] {
@@ -178,6 +205,8 @@ export function useTasks(deps: UseTasksDependencies = {}) {
   }
 
   async function flushPendingMutations(): Promise<void> {
+    clearPendingRetryTimer();
+
     if (!isOnline() || store.pendingMutationQueue.length === 0) {
       return;
     }
@@ -187,10 +216,21 @@ export function useTasks(deps: UseTasksDependencies = {}) {
       token = getRequiredToken();
     } catch {
       store.errorMessage = 'Synchronisation en attente: session invalide.';
+      store.syncState = recordPendingMutationSyncFailure(
+        store.syncState,
+        'Session invalide.',
+        false
+      );
       return;
     }
 
     const remainingOperations: PendingTaskCreateOperation[] = [];
+    const attemptStartedAt = new Date().toISOString();
+
+    store.syncState = {
+      ...store.syncState,
+      lastAttemptAt: attemptStartedAt
+    };
 
     for (const operation of store.pendingMutationQueue) {
       try {
@@ -229,8 +269,19 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     store.pendingMutationQueue = remainingOperations;
 
     if (remainingOperations.length > 0) {
-      store.errorMessage = 'Certaines taches restent en attente de synchronisation.';
-    } else if (store.errorMessage.includes('synchronisation')) {
+      store.syncState = recordPendingMutationSyncFailure(
+        store.syncState,
+        'Certaines taches restent en attente de synchronisation.',
+        true
+      );
+      store.errorMessage = buildPendingMutationSyncMessage(
+        'des taches',
+        remainingOperations.length,
+        store.syncState
+      );
+      schedulePendingRetry();
+    } else {
+      store.syncState = recordPendingMutationSyncSuccess(store.syncState);
       store.errorMessage = '';
     }
   }
@@ -431,6 +482,9 @@ export function useTasks(deps: UseTasksDependencies = {}) {
     isLoading: computed(() => store.isLoading),
     errorMessage: computed(() => store.errorMessage),
     pendingSyncCount: computed(() => store.pendingMutationQueue.length),
+    syncStatusMessage: computed(() =>
+      buildPendingMutationSyncMessage('des taches', store.pendingMutationQueue.length, store.syncState)
+    ),
     getTasksForList: (listId: string) => computed(() => readListTasks(listId)),
     loadTasks,
     flushPendingMutations,
