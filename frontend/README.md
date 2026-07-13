@@ -15,6 +15,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Module Lists frontend en place (lecture/creation/suppression).
 - Module Tasks frontend en place (lecture/creation/completion/reouverture/suppression).
 - Temps reel Tasks via WebSocket (Socket.IO) en place.
+- Hardening realtime: reconnect/resubscribe et statut socket visible en UI.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 
 ## Arborescence active
@@ -109,14 +110,15 @@ Niveaux couverts:
 - Unitaire: helpers du domaine.
 - Integration: use cases/composables avec adapters mockes.
 - E2E: parcours dashboard auth + lists + tasks (Playwright).
+- E2E multi-onglets: verification de coherence des donnees entre clients.
 
 ## Prochaine etape
 
-Ajouter la synchronisation multi-clients et hardening realtime:
+Prochaine evolution suggeree:
 
-- gestion explicite reconnect/resubscribe,
-- tests e2e multi-onglets,
-- notifications UX de statut socket.
+- supervision/telemetrie des latences realtime,
+- gestion offline-first,
+- retries metier sur conflits de synchro.
 
 ## Dependance ajoutee a cette etape
 

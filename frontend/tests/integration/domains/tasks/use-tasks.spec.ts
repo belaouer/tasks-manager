@@ -141,6 +141,15 @@ describe('useTasks integration', () => {
           }) => void;
         }
       | null = null;
+    let lifecycleHandlers:
+      | {
+          onConnecting: () => void;
+          onConnected: () => void;
+          onReconnecting: () => void;
+          onDisconnected: () => void;
+          onError: () => void;
+        }
+      | null = null;
 
     const realtimeAdapter = {
       connect: vi.fn(),
@@ -149,6 +158,9 @@ describe('useTasks integration', () => {
       leaveList: vi.fn(),
       onEvents: vi.fn((handlers) => {
         registeredHandlers = handlers;
+      }),
+      onLifecycle: vi.fn((handlers) => {
+        lifecycleHandlers = handlers;
       }),
       removeAllListeners: vi.fn()
     };
@@ -165,6 +177,10 @@ describe('useTasks integration', () => {
     expect(realtimeAdapter.connect).toHaveBeenCalledWith('access-token');
     expect(realtimeAdapter.joinList).toHaveBeenCalledWith('list-1');
     expect(registeredHandlers).not.toBeNull();
+    expect(lifecycleHandlers).not.toBeNull();
+
+    lifecycleHandlers!.onConnected();
+    expect(realtimeAdapter.joinList).toHaveBeenCalledWith('list-1');
 
     registeredHandlers!.onTaskCreated(createTask({ id: 'created' }));
     registeredHandlers!.onTaskUpdated(createTask({ id: 'updated' }));

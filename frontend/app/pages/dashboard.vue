@@ -92,7 +92,15 @@
       class="rounded-3xl border p-6 shadow-shell backdrop-blur sm:p-8"
       :class="isDarkMode ? 'border-slate-700 bg-slate-900/65' : 'border-white/80 bg-white/75'"
     >
-      <h2 class="font-display text-3xl font-bold">Taches</h2>
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="font-display text-3xl font-bold">Taches</h2>
+        <span
+          class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase"
+          :class="realtimeBadgeClass"
+        >
+          Socket: {{ realtimeStatusLabel }}
+        </span>
+      </div>
       <p class="mt-3 text-sm leading-7" :class="mutedClass">
         {{ selectedListId ? 'Gestion complete des taches de la liste selectionnee.' : 'Selectionne une liste pour afficher ses taches.' }}
       </p>
@@ -240,7 +248,7 @@ const {
   upsertTaskFromRealtime,
   deleteTaskFromRealtime
 } = useTasks();
-const { subscribeToList, stop: stopRealtime } = useTasksRealtime({
+const { subscribeToList, stop: stopRealtime, status: realtimeStatus } = useTasksRealtime({
   onTaskUpsert: (task) => upsertTaskFromRealtime(task),
   onTaskDeleted: (payload) => deleteTaskFromRealtime(payload)
 });
@@ -274,6 +282,47 @@ const primaryButtonClass = computed(() =>
     ? 'bg-cyan-400/20 text-cyan-200 ring-1 ring-cyan-300/40 hover:bg-cyan-400/30'
     : 'bg-slate-900 text-slate-100 hover:bg-slate-800'
 );
+
+const realtimeStatusLabel = computed(() => {
+  switch (realtimeStatus.value) {
+    case 'connected':
+      return 'connecte';
+    case 'connecting':
+      return 'connexion';
+    case 'reconnecting':
+      return 'reconnexion';
+    case 'disconnected':
+      return 'deconnecte';
+    case 'error':
+      return 'erreur';
+    default:
+      return 'inactif';
+  }
+});
+
+const realtimeBadgeClass = computed(() => {
+  if (realtimeStatus.value === 'connected') {
+    return isDarkMode.value
+      ? 'border-emerald-300/50 bg-emerald-900/20 text-emerald-100'
+      : 'border-emerald-400 bg-emerald-50 text-emerald-700';
+  }
+
+  if (realtimeStatus.value === 'connecting' || realtimeStatus.value === 'reconnecting') {
+    return isDarkMode.value
+      ? 'border-amber-300/50 bg-amber-900/20 text-amber-100'
+      : 'border-amber-400 bg-amber-50 text-amber-700';
+  }
+
+  if (realtimeStatus.value === 'error') {
+    return isDarkMode.value
+      ? 'border-rose-300/50 bg-rose-900/20 text-rose-100'
+      : 'border-rose-300 bg-rose-50 text-rose-700';
+  }
+
+  return isDarkMode.value
+    ? 'border-slate-600 bg-slate-900/50 text-slate-200'
+    : 'border-slate-300 bg-slate-50 text-slate-700';
+});
 
 const selectedTasks = computed(() => {
   if (selectedListId.value.length === 0) {
