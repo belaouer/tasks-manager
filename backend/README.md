@@ -115,7 +115,28 @@ Non installé volontairement à ce stade:
 
 ## Plan d'implémentation (prochaine étape)
 
-1. Ajouter les tests d'intégration WebSocket (handshake JWT + join/leave room + réception d'événements) et finaliser la phase temps réel.
+1. Préparer la finalisation de la branche temps réel (revue finale + merge vers main).
+
+## Etape réalisée: Tests d'intégration WebSocket Tasks
+
+Eléments implémentés:
+
+- Nouveau test d'intégration `tasks.gateway.integration.spec.ts` pour le gateway temps réel.
+- Scénarios couverts:
+  - connexion WebSocket rejetée sans token JWT,
+  - join room par liste (`lists:join`) et leave room (`lists:leave`),
+  - réception des événements temps réel côté client:
+    - `task:created`
+    - `task:completed`
+    - `task:updated`
+    - `task:deleted`
+  - isolation entre rooms: un client sur une autre liste ne reçoit pas l'événement.
+
+Décisions clés:
+
+- Les tests valident le comportement réel Socket.IO contre l'application Nest démarrée en mémoire.
+- L'authentification JWT au handshake est vérifiée dans un scénario bout-en-bout.
+- La couverture complète le socle temps réel déjà branché dans les use cases Tasks.
 
 ## Etape réalisée: Socle WebSocket temps réel Tasks
 
