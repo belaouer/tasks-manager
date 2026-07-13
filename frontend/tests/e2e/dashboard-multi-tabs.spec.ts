@@ -8,11 +8,19 @@ test('dashboard keeps data consistency across two tabs', async ({ browser }) => 
       name: 'Sprint',
       createdAt: '2026-07-10T10:00:00.000Z',
       updatedAt: '2026-07-10T10:00:00.000Z'
+    },
+    {
+      id: 'list-2',
+      ownerUserId: 'user-1',
+      name: 'Backlog',
+      createdAt: '2026-07-10T10:05:00.000Z',
+      updatedAt: '2026-07-10T10:05:00.000Z'
     }
   ];
 
   const tasksByList: Record<string, any[]> = {
-    'list-1': []
+    'list-1': [],
+    'list-2': []
   };
 
   const context = await browser.newContext({ baseURL: 'http://127.0.0.1:4173' });
@@ -104,7 +112,8 @@ test('dashboard keeps data consistency across two tabs', async ({ browser }) => 
   await pageA.getByRole('button', { name: 'Ajouter la tache' }).click();
   await expect(pageA.getByText('Task from tab A')).toBeVisible();
 
-  await pageB.reload();
+  await pageB.locator('article').filter({ hasText: 'Backlog' }).getByRole('button', { name: 'Ouvrir' }).click();
+  await pageB.locator('article').filter({ hasText: 'Sprint' }).getByRole('button', { name: 'Ouvrir' }).click();
   await expect(pageB.getByText('Task from tab A')).toBeVisible();
 
   await context.close();

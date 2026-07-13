@@ -105,6 +105,22 @@
         {{ selectedListId ? 'Gestion complete des taches de la liste selectionnee.' : 'Selectionne une liste pour afficher ses taches.' }}
       </p>
 
+      <div class="mt-4 grid gap-2 sm:grid-cols-2">
+        <article
+          v-for="metric in realtimeMetrics"
+          :key="metric.label"
+          class="rounded-xl border px-3 py-2"
+          :class="isDarkMode ? 'border-slate-700 bg-slate-950/40' : 'border-slate-200 bg-white/70'"
+        >
+          <p class="text-[11px] font-semibold uppercase tracking-wide" :class="mutedClass">
+            {{ metric.label }}
+          </p>
+          <p class="mt-1 text-sm font-semibold" :class="isDarkMode ? 'text-slate-100' : 'text-slate-800'">
+            {{ metric.value }}
+          </p>
+        </article>
+      </div>
+
       <form
         v-if="selectedListId"
         class="mt-5 grid gap-3"
@@ -248,7 +264,12 @@ const {
   upsertTaskFromRealtime,
   deleteTaskFromRealtime
 } = useTasks();
-const { subscribeToList, stop: stopRealtime, status: realtimeStatus } = useTasksRealtime({
+const {
+  subscribeToList,
+  stop: stopRealtime,
+  status: realtimeStatus,
+  observability: realtimeObservability
+} = useTasksRealtime({
   onTaskUpsert: (task) => upsertTaskFromRealtime(task),
   onTaskDeleted: (payload) => deleteTaskFromRealtime(payload)
 });
@@ -324,6 +345,25 @@ const realtimeBadgeClass = computed(() => {
     : 'border-slate-300 bg-slate-50 text-slate-700';
 });
 
+const realtimeMetrics = computed(() => [
+  {
+    label: 'Reconnexions',
+    value: String(realtimeObservability.value.reconnectAttempts)
+  },
+  {
+    label: 'Derniere connexion',
+    value: formatRealtimeDate(realtimeObservability.value.lastConnectedAt)
+  },
+  {
+    label: 'Derniere deconnexion',
+    value: formatRealtimeDate(realtimeObservability.value.lastDisconnectedAt)
+  },
+  {
+    label: 'Derniere erreur',
+    value: formatRealtimeDate(realtimeObservability.value.lastErrorAt)
+  }
+]);
+
 const selectedTasks = computed(() => {
   if (selectedListId.value.length === 0) {
     return [];
@@ -335,6 +375,19 @@ const selectedTasks = computed(() => {
 function formatDate(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString('fr-FR');
+}
+
+function formatRealtimeDate(iso: string | null): string {
+  if (!iso) {
+    return '-';
+  }
+
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return date.toLocaleString('fr-FR');
 }
 
 async function handleCreateList(): Promise<void> {

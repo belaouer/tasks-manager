@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useAuthSession } from '~/domains/auth/application/use-auth-session';
 import type { TaskSummary } from '../domain/task-summary';
 import type { TaskDeletedEvent } from '../domain/tasks-realtime-events';
+import type { TasksRealtimeObservability } from '../domain/tasks-realtime-observability';
 import type { TasksRealtimeStatus } from '../domain/tasks-realtime-lifecycle';
 import { SocketIoTasksRealtimeAdapter } from '../infrastructure/socketio-tasks-realtime.adapter';
 
@@ -35,6 +36,10 @@ const REALTIME_CONNECTED_KEY = 'tasks-manager.tasks.realtime.connected';
 const REALTIME_LIST_KEY = 'tasks-manager.tasks.realtime.list';
 const REALTIME_BOUND_KEY = 'tasks-manager.tasks.realtime.bound';
 const REALTIME_STATUS_KEY = 'tasks-manager.tasks.realtime.status';
+const REALTIME_RECONNECT_ATTEMPTS_KEY = 'tasks-manager.tasks.realtime.reconnect-attempts';
+const REALTIME_LAST_CONNECTED_AT_KEY = 'tasks-manager.tasks.realtime.last-connected-at';
+const REALTIME_LAST_DISCONNECTED_AT_KEY = 'tasks-manager.tasks.realtime.last-disconnected-at';
+const REALTIME_LAST_ERROR_AT_KEY = 'tasks-manager.tasks.realtime.last-error-at';
 
 const defaultAdapter = new SocketIoTasksRealtimeAdapter();
 
@@ -47,6 +52,14 @@ export function useTasksRealtime(deps: UseTasksRealtimeDependencies) {
   const activeListId = useState<string>(REALTIME_LIST_KEY, () => '');
   const listenersBound = useState<boolean>(REALTIME_BOUND_KEY, () => false);
   const status = useState<TasksRealtimeStatus>(REALTIME_STATUS_KEY, () => 'idle');
+  const reconnectAttempts = useState<number>(REALTIME_RECONNECT_ATTEMPTS_KEY, () => 0);
+  const lastConnectedAt = useState<string | null>(REALTIME_LAST_CONNECTED_AT_KEY, () => null);
+  const lastDisconnectedAt = useState<string | null>(REALTIME_LAST_DISCONNECTED_AT_KEY, () => null);
+  const lastErrorAt = useState<string | null>(REALTIME_LAST_ERROR_AT_KEY, () => null);
+
+  function markNow(): string {
+    return new Date().toISOString();
+  }
 
   function ensureConnected(): boolean {
     const token = getAccessToken();
@@ -81,18 +94,22 @@ export function useTasksRealtime(deps: UseTasksRealtimeDependencies) {
       },
       onConnected: () => {
         status.value = 'connected';
+        lastConnectedAt.value = markNow();
         if (activeListId.value.length > 0) {
           realtimeAdapter.joinList(activeListId.value);
         }
       },
       onReconnecting: () => {
         status.value = 'reconnecting';
+        reconnectAttempts.value += 1;
       },
       onDisconnected: () => {
         status.value = 'disconnected';
+        lastDisconnectedAt.value = markNow();
       },
       onError: () => {
         status.value = 'error';
+        lastErrorAt.value = markNow();
       }
     });
 
@@ -130,6 +147,12 @@ export function useTasksRealtime(deps: UseTasksRealtimeDependencies) {
   return {
     isConnected: computed(() => isConnected.value),
     status: computed(() => status.value),
+    observability: computed<TasksRealtimeObservability>(() => ({
+      reconnectAttempts: reconnectAttempts.value,
+      lastConnectedAt: lastConnectedAt.value,
+      lastDisconnectedAt: lastDisconnectedAt.value,
+      lastErrorAt: lastErrorAt.value
+    })),
     activeListId: computed(() => activeListId.value),
     subscribeToList,
     stop
