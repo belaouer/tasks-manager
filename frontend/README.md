@@ -26,6 +26,7 @@ Il demarre par une fondation UI claire, responsive et maintenable, avant integra
 - Right sidebar detail de tache activee sur selection d'une tache.
 - Modales de confirmation de suppression (liste et tache) implementees.
 - Section dediee Mes taches terminees implementee (repliee par defaut, depliable).
+- Couche presentation decomposee en composants par domaine (`components/domains/*`) + composants mutualises (`components/shared/*`).
 - Intercepteur HTTP centralise via client API Nuxt: refresh transparent sur 401 + retry + redirection login en cas d'echec refresh.
 - Strategie de tests frontend en place: unitaires, integration et e2e.
 - Hardening de la synchro offline: retry differe avec backoff exponentiel et messages d'etat plus riches pour les files Lists/Tasks.
@@ -62,6 +63,11 @@ app/
 			domain/
 			application/
 			infrastructure/
+		components/
+			domains/
+				lists/
+				tasks/
+			shared/
 	layouts/
 		default.vue
 	pages/
@@ -85,7 +91,7 @@ playwright.config.ts
 
 Regle DDD frontend appliquee:
 
-- UI dans `app/pages`.
+- UI dans `app/pages` + `app/components`.
 - Metier frontend dans `app/domains`.
 - Les pages consomment les use cases frontend sans porter la logique metier.
 

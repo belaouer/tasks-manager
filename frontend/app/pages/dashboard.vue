@@ -5,486 +5,90 @@
       ? 'xl:grid-cols-[minmax(260px,340px)_minmax(0,1fr)_minmax(280px,360px)]'
       : 'xl:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]'"
   >
-    <article
-      class="min-w-0 rounded-3xl border p-6 shadow-shell backdrop-blur sm:p-8"
-      :class="isDarkMode ? 'border-slate-700 bg-slate-900/65' : 'border-white/80 bg-white/75'"
-    >
-      <div class="flex items-center justify-between gap-3">
-        <h1 class="font-display text-4xl font-bold">Mes listes</h1>
-        <button
-          type="button"
-          class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-          :class="isDarkMode
-            ? 'border-slate-500 bg-slate-900/60 text-slate-200 hover:bg-slate-800'
-            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'"
-          @click="toggleLeftSidebar"
-        >
-          {{ isLeftSidebarCollapsed ? 'Etendre' : 'Reduire' }}
-        </button>
-      </div>
-      <div class="mt-3">
-        <span
-          class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase"
-          :class="networkBadgeClass"
-        >
-          Reseau: {{ networkStatusLabel }}
-        </span>
-      </div>
-      <p class="mt-3 text-sm leading-7" :class="isDarkMode ? 'text-slate-300' : 'text-slate-600'">
-        Cree, consulte et supprime tes listes.
-      </p>
+    <ListsSidebarPanel
+      :is-dark-mode="isDarkMode"
+      :is-online="isOnline"
+      :is-left-sidebar-collapsed="isLeftSidebarCollapsed"
+      :list-name="listName"
+      :lists="lists"
+      :lists-loading="listsLoading"
+      :lists-error="listsError"
+      :lists-sync-status-message="listsSyncStatusMessage"
+      :network-badge-class="networkBadgeClass"
+      :network-status-label="networkStatusLabel"
+      :input-class="inputClass"
+      :primary-button-class="primaryButtonClass"
+      :disabled-button-class="disabledButtonClass"
+      :error-class="errorClass"
+      :muted-class="mutedClass"
+      :is-selected-list="isSelectedList"
+      :format-date="formatDate"
+      @toggle-left-sidebar="toggleLeftSidebar"
+      @update-list-name="listName = $event"
+      @create-list="handleCreateList"
+      @select-list="selectList"
+      @request-delete-list="requestDeleteList($event.id, $event.label)"
+    />
 
-      <form v-show="!isLeftSidebarCollapsed" class="mt-5 flex flex-col gap-3" @submit.prevent="handleCreateList">
-        <input
-          v-model="listName"
-          type="text"
-          maxlength="120"
-          placeholder="Nom de la nouvelle liste"
-          class="w-full rounded-xl border px-3 py-2 text-sm"
-          :class="inputClass"
-        />
-        <button
-          type="submit"
-          class="rounded-xl px-4 py-2 text-sm font-semibold transition"
-          :class="[primaryButtonClass, !isOnline ? disabledButtonClass : '']"
-          :disabled="!isOnline"
-        >
-          Ajouter
-        </button>
-      </form>
+    <TasksPanel
+      :is-dark-mode="isDarkMode"
+      :is-online="isOnline"
+      :selected-list-id="selectedListId"
+      :selected-task-id="selectedTaskId"
+      :task-form="taskForm"
+      :tasks-loading="tasksLoading"
+      :tasks-error="tasksError"
+      :tasks-sync-status-message="tasksSyncStatusMessage"
+      :realtime-status-label="realtimeStatusLabel"
+      :realtime-badge-class="realtimeBadgeClass"
+      :realtime-metrics="realtimeMetrics"
+      :input-class="inputClass"
+      :primary-button-class="primaryButtonClass"
+      :error-class="errorClass"
+      :muted-class="mutedClass"
+      :active-tasks="activeTasks"
+      :completed-tasks="completedTasks"
+      :is-completed-tasks-collapsed="isCompletedTasksCollapsed"
+      :is-task-completed="isTaskCompleted"
+      :format-date="formatDate"
+      @update-task-form="taskForm = $event"
+      @create-task="handleCreateTask"
+      @open-task-details="openTaskDetails"
+      @complete-task="handleCompleteTask"
+      @reopen-task="handleReopenTask"
+      @request-delete-task="requestDeleteTask($event.id, $event.label)"
+      @toggle-completed-tasks-section="toggleCompletedTasksSection"
+    />
 
-      <p
-        v-if="listsError"
-        class="mt-4 rounded-lg border px-3 py-2 text-sm"
-        :class="errorClass"
-      >
-        {{ listsError }}
-      </p>
-
-      <p
-        v-if="listsSyncStatusMessage"
-        class="mt-2 rounded-lg border px-3 py-2 text-xs font-semibold"
-        :class="isDarkMode
-          ? 'border-amber-300/30 bg-amber-900/10 text-amber-100'
-          : 'border-amber-200 bg-amber-50 text-amber-800'"
-      >
-        {{ listsSyncStatusMessage }}
-      </p>
-
-      <p v-if="listsLoading" class="mt-4 text-sm" :class="mutedClass">
-        Chargement des listes...
-      </p>
-
-      <div v-show="!isLeftSidebarCollapsed" v-else class="mt-5 grid gap-3">
-        <article
-          v-for="list in lists"
-          :key="list.id"
-          class="min-w-0 rounded-2xl border p-4"
-          :class="isDarkMode ? 'border-slate-700 bg-slate-950/45' : 'border-slate-200 bg-white/85'"
-        >
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div class="min-w-0 flex-1">
-              <h2 class="truncate text-base font-semibold sm:whitespace-normal sm:break-words">{{ list.name }}</h2>
-              <p v-if="list.pendingSync" class="mt-1 text-xs font-semibold" :class="isDarkMode ? 'text-amber-200' : 'text-amber-700'">
-                En attente de synchronisation
-              </p>
-              <p class="mt-1 text-xs" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">
-                Creee le {{ formatDate(list.createdAt) }}
-              </p>
-            </div>
-            <div class="flex flex-wrap gap-2 sm:justify-end">
-              <button
-                type="button"
-                class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-                :class="isSelectedList(list.id)
-                  ? (isDarkMode ? 'border-cyan-300/60 bg-cyan-900/20 text-cyan-100' : 'border-cyan-400 bg-cyan-50 text-cyan-700')
-                  : (isDarkMode ? 'border-slate-600 bg-slate-900/50 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100')"
-                @click="selectList(list.id)"
-              >
-                {{ isSelectedList(list.id) ? 'Ouverte' : 'Ouvrir' }}
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-                :class="isDarkMode
-                  ? 'border-rose-400/40 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30'
-                  : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
-                aria-label="Supprimer la liste"
-                :disabled="!isOnline"
-                :aria-disabled="!isOnline"
-                @click="requestDeleteList(list.id, list.name)"
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </article>
-
-        <article
-          v-if="lists.length === 0"
-          class="rounded-2xl border border-dashed p-6 text-center text-sm"
-          :class="isDarkMode ? 'border-slate-700 text-slate-300' : 'border-slate-300 text-slate-600'"
-        >
-          Aucune liste pour le moment.
-        </article>
-      </div>
-    </article>
-
-    <article
-      class="rounded-3xl border p-6 shadow-shell backdrop-blur sm:p-8"
-      :class="isDarkMode ? 'border-slate-700 bg-slate-900/65' : 'border-white/80 bg-white/75'"
-    >
-      <div class="flex items-start justify-between gap-3">
-        <h2 class="font-display text-3xl font-bold">Taches</h2>
-        <span
-          class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase"
-          :class="realtimeBadgeClass"
-        >
-          Socket: {{ realtimeStatusLabel }}
-        </span>
-      </div>
-      <p class="mt-3 text-sm leading-7" :class="mutedClass">
-        {{ selectedListId ? 'Gestion complete des taches de la liste selectionnee.' : 'Selectionne une liste pour afficher ses taches.' }}
-      </p>
-
-      <div class="mt-4 grid gap-2 sm:grid-cols-2">
-        <article
-          v-for="metric in realtimeMetrics"
-          :key="metric.label"
-          class="rounded-xl border px-3 py-2"
-          :class="isDarkMode ? 'border-slate-700 bg-slate-950/40' : 'border-slate-200 bg-white/70'"
-        >
-          <p class="text-[11px] font-semibold uppercase tracking-wide" :class="mutedClass">
-            {{ metric.label }}
-          </p>
-          <p class="mt-1 text-sm font-semibold" :class="isDarkMode ? 'text-slate-100' : 'text-slate-800'">
-            {{ metric.value }}
-          </p>
-        </article>
-      </div>
-
-      <form
-        v-if="selectedListId"
-        class="mt-5 grid gap-3"
-        @submit.prevent="handleCreateTask"
-      >
-        <input
-          v-model="taskForm.shortDescription"
-          type="text"
-          maxlength="120"
-          placeholder="Description courte"
-          class="w-full rounded-xl border px-3 py-2 text-sm"
-          :class="inputClass"
-        />
-        <textarea
-          v-model="taskForm.longDescription"
-          rows="3"
-          placeholder="Description longue (optionnelle)"
-          class="w-full rounded-xl border px-3 py-2 text-sm"
-          :class="inputClass"
-        />
-        <input
-          v-model="taskForm.dueDate"
-          type="date"
-          class="w-full rounded-xl border px-3 py-2 text-sm"
-          :class="inputClass"
-        />
-        <button
-          type="submit"
-          class="rounded-xl px-4 py-2 text-sm font-semibold transition"
-          :class="primaryButtonClass"
-        >
-          Ajouter la tache
-        </button>
-      </form>
-
-      <p v-if="tasksError" class="mt-4 rounded-lg border px-3 py-2 text-sm" :class="errorClass">
-        {{ tasksError }}
-      </p>
-
-      <p
-        v-if="tasksSyncStatusMessage"
-        class="mt-2 rounded-lg border px-3 py-2 text-xs font-semibold"
-        :class="isDarkMode
-          ? 'border-amber-300/30 bg-amber-900/10 text-amber-100'
-          : 'border-amber-200 bg-amber-50 text-amber-800'"
-      >
-        {{ tasksSyncStatusMessage }}
-      </p>
-
-      <p v-if="tasksLoading" class="mt-4 text-sm" :class="mutedClass">
-        Chargement des taches...
-      </p>
-
-      <div v-else-if="selectedListId" class="mt-5 space-y-4">
-        <div class="grid gap-3">
-        <article
-          v-for="task in activeTasks"
-          :key="task.id"
-          class="rounded-2xl border p-4"
-          :class="isDarkMode ? 'border-slate-700 bg-slate-950/45' : 'border-slate-200 bg-white/85'"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <h3 class="text-base font-semibold">{{ task.shortDescription }}</h3>
-              <p v-if="task.pendingSync" class="mt-1 text-xs font-semibold" :class="isDarkMode ? 'text-amber-200' : 'text-amber-700'">
-                En attente de synchronisation
-              </p>
-              <p v-if="task.longDescription" class="mt-1 text-sm" :class="mutedClass">{{ task.longDescription }}</p>
-              <p class="mt-2 text-xs" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">
-                Echeance: {{ formatDate(task.dueDate) }}
-              </p>
-            </div>
-            <span
-              class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase"
-              :class="isTaskCompleted(task)
-                ? (isDarkMode ? 'border-emerald-300/50 bg-emerald-900/20 text-emerald-100' : 'border-emerald-400 bg-emerald-50 text-emerald-700')
-                : (isDarkMode ? 'border-amber-300/50 bg-amber-900/20 text-amber-100' : 'border-amber-400 bg-amber-50 text-amber-700')"
-            >
-              {{ isTaskCompleted(task) ? 'Terminee' : 'En cours' }}
-            </span>
-          </div>
-
-          <div class="mt-3 flex gap-2">
-            <button
-              type="button"
-              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-              :class="selectedTaskId === task.id
-                ? (isDarkMode ? 'border-cyan-300/60 bg-cyan-900/20 text-cyan-100' : 'border-cyan-400 bg-cyan-50 text-cyan-700')
-                : (isDarkMode ? 'border-slate-600 bg-slate-900/50 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100')"
-              @click="openTaskDetails(task.id)"
-            >
-              Details
-            </button>
-            <button
-              v-if="!isTaskCompleted(task)"
-              type="button"
-              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-              :class="isDarkMode ? 'border-emerald-300/50 bg-emerald-900/20 text-emerald-100 hover:bg-emerald-900/30' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'"
-              :disabled="!isOnline"
-              @click="handleCompleteTask(task.id)"
-            >
-              Completer
-            </button>
-            <button
-              v-else
-              type="button"
-              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-              :class="isDarkMode ? 'border-amber-300/50 bg-amber-900/20 text-amber-100 hover:bg-amber-900/30' : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'"
-              :disabled="!isOnline"
-              @click="handleReopenTask(task.id)"
-            >
-              Reouvrir
-            </button>
-            <button
-              type="button"
-              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-              :class="isDarkMode ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
-              aria-label="Supprimer la tache"
-              :disabled="!isOnline"
-              @click="requestDeleteTask(task.id, task.shortDescription)"
-            >
-              Supprimer
-            </button>
-          </div>
-        </article>
-        </div>
-
-        <article
-          v-if="activeTasks.length === 0"
-          class="rounded-2xl border border-dashed p-6 text-center text-sm"
-          :class="isDarkMode ? 'border-slate-700 text-slate-300' : 'border-slate-300 text-slate-600'"
-        >
-          Aucune tache en cours pour cette liste.
-        </article>
-
-        <section class="rounded-2xl border p-4" :class="isDarkMode ? 'border-slate-700 bg-slate-950/45' : 'border-slate-200 bg-white/85'">
-          <div class="flex items-center justify-between gap-3">
-            <h3 class="text-base font-semibold">Mes taches terminees</h3>
-            <button
-              type="button"
-              class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-              :class="isDarkMode
-                ? 'border-slate-600 bg-slate-900/50 text-slate-200 hover:bg-slate-800'
-                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'"
-              :aria-expanded="!isCompletedTasksCollapsed"
-              @click="toggleCompletedTasksSection"
-            >
-              {{ isCompletedTasksCollapsed ? 'Afficher' : 'Masquer' }} ({{ completedTasks.length }})
-            </button>
-          </div>
-
-          <div v-show="!isCompletedTasksCollapsed" class="mt-4 grid gap-3">
-            <article
-              v-for="task in completedTasks"
-              :key="task.id"
-              class="rounded-2xl border p-4"
-              :class="isDarkMode ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50/80'"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <h4 class="text-base font-semibold">{{ task.shortDescription }}</h4>
-                  <p v-if="task.longDescription" class="mt-1 text-sm" :class="mutedClass">{{ task.longDescription }}</p>
-                  <p class="mt-2 text-xs" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">
-                    Echeance: {{ formatDate(task.dueDate) }}
-                  </p>
-                </div>
-                <span
-                  class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase"
-                  :class="isDarkMode ? 'border-emerald-300/50 bg-emerald-900/20 text-emerald-100' : 'border-emerald-400 bg-emerald-50 text-emerald-700'"
-                >
-                  Terminee
-                </span>
-              </div>
-
-              <div class="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-                  :class="selectedTaskId === task.id
-                    ? (isDarkMode ? 'border-cyan-300/60 bg-cyan-900/20 text-cyan-100' : 'border-cyan-400 bg-cyan-50 text-cyan-700')
-                    : (isDarkMode ? 'border-slate-600 bg-slate-900/50 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100')"
-                  @click="openTaskDetails(task.id)"
-                >
-                  Details
-                </button>
-                <button
-                  type="button"
-                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-                  :class="isDarkMode ? 'border-amber-300/50 bg-amber-900/20 text-amber-100 hover:bg-amber-900/30' : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'"
-                  :disabled="!isOnline"
-                  @click="handleReopenTask(task.id)"
-                >
-                  Reouvrir
-                </button>
-                <button
-                  type="button"
-                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-                  :class="isDarkMode ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
-                  aria-label="Supprimer la tache"
-                  :disabled="!isOnline"
-                  @click="requestDeleteTask(task.id, task.shortDescription)"
-                >
-                  Supprimer
-                </button>
-              </div>
-            </article>
-
-            <article
-              v-if="completedTasks.length === 0"
-              class="rounded-2xl border border-dashed p-6 text-center text-sm"
-              :class="isDarkMode ? 'border-slate-700 text-slate-300' : 'border-slate-300 text-slate-600'"
-            >
-              Aucune tache terminee pour cette liste.
-            </article>
-          </div>
-        </section>
-      </div>
-    </article>
-
-    <article
+    <TaskDetailPanel
       v-if="selectedTask"
-      class="rounded-3xl border p-6 shadow-shell backdrop-blur sm:p-8"
-      :class="isDarkMode ? 'border-slate-700 bg-slate-900/65' : 'border-white/80 bg-white/75'"
-    >
-      <h2 class="font-display text-3xl font-bold">Detail de la tache</h2>
-      <p class="mt-2 text-sm" :class="mutedClass">
-        Informations completes de la tache selectionnee.
-      </p>
+      :is-dark-mode="isDarkMode"
+      :is-online="isOnline"
+      :muted-class="mutedClass"
+      :task="selectedTask"
+      :is-task-completed="isTaskCompleted"
+      :format-date="formatDate"
+      :format-realtime-date="formatRealtimeDate"
+      @request-delete-task="requestDeleteTask($event.id, $event.label)"
+    />
 
-      <div class="mt-5 space-y-4">
-        <article class="rounded-xl border p-4" :class="isDarkMode ? 'border-slate-700 bg-slate-950/40' : 'border-slate-200 bg-white/70'">
-          <p class="text-[11px] font-semibold uppercase tracking-wide" :class="mutedClass">Description courte</p>
-          <p class="mt-1 text-sm font-semibold" :class="isDarkMode ? 'text-slate-100' : 'text-slate-800'">{{ selectedTask.shortDescription }}</p>
-        </article>
-
-        <article class="rounded-xl border p-4" :class="isDarkMode ? 'border-slate-700 bg-slate-950/40' : 'border-slate-200 bg-white/70'">
-          <p class="text-[11px] font-semibold uppercase tracking-wide" :class="mutedClass">Description longue</p>
-          <p class="mt-1 text-sm" :class="isDarkMode ? 'text-slate-100' : 'text-slate-800'">{{ selectedTask.longDescription ?? '-' }}</p>
-        </article>
-
-        <article class="rounded-xl border p-4" :class="isDarkMode ? 'border-slate-700 bg-slate-950/40' : 'border-slate-200 bg-white/70'">
-          <p class="text-[11px] font-semibold uppercase tracking-wide" :class="mutedClass">Echeance</p>
-          <p class="mt-1 text-sm" :class="isDarkMode ? 'text-slate-100' : 'text-slate-800'">{{ formatDate(selectedTask.dueDate) }}</p>
-        </article>
-
-        <article class="rounded-xl border p-4" :class="isDarkMode ? 'border-slate-700 bg-slate-950/40' : 'border-slate-200 bg-white/70'">
-          <p class="text-[11px] font-semibold uppercase tracking-wide" :class="mutedClass">Creation</p>
-          <p class="mt-1 text-sm" :class="isDarkMode ? 'text-slate-100' : 'text-slate-800'">{{ formatRealtimeDate(selectedTask.createdAt) }}</p>
-        </article>
-
-        <article class="rounded-xl border p-4" :class="isDarkMode ? 'border-slate-700 bg-slate-950/40' : 'border-slate-200 bg-white/70'">
-          <p class="text-[11px] font-semibold uppercase tracking-wide" :class="mutedClass">Statut</p>
-          <p class="mt-1 text-sm font-semibold" :class="isTaskCompleted(selectedTask)
-            ? (isDarkMode ? 'text-emerald-200' : 'text-emerald-700')
-            : (isDarkMode ? 'text-amber-200' : 'text-amber-700')"
-          >
-            {{ isTaskCompleted(selectedTask) ? 'Terminee' : 'En cours' }}
-          </p>
-        </article>
-      </div>
-
-      <button
-        type="button"
-        class="mt-5 rounded-xl border px-4 py-2 text-sm font-semibold transition"
-        :class="isDarkMode ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
-        :disabled="!isOnline"
-        @click="requestDeleteTask(selectedTask.id, selectedTask.shortDescription)"
-      >
-        Supprimer la tache
-      </button>
-    </article>
-
-    <div
-      v-if="deleteConfirmation"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      <article
-        class="w-full max-w-md rounded-2xl border p-6 shadow-shell"
-        :class="isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'"
-      >
-        <h3 class="font-display text-2xl font-bold">Confirmer la suppression</h3>
-        <p class="mt-3 text-sm leading-7" :class="mutedClass">
-          {{ deleteConfirmation.kind === 'list'
-            ? `Tu vas supprimer la liste \"${deleteConfirmation.label}\" et toutes ses taches.`
-            : `Tu vas supprimer la tache \"${deleteConfirmation.label}\".` }}
-        </p>
-        <p class="mt-2 text-xs font-semibold uppercase tracking-wide" :class="isDarkMode ? 'text-rose-200' : 'text-rose-700'">
-          Cette action est irreversible.
-        </p>
-
-        <div class="mt-5 flex justify-end gap-3">
-          <button
-            type="button"
-            class="rounded-lg border px-4 py-2 text-sm font-semibold transition"
-            :class="isDarkMode
-              ? 'border-slate-600 bg-slate-950/50 text-slate-100 hover:bg-slate-800'
-              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'"
-            @click="closeDeleteConfirmation"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            class="rounded-lg border px-4 py-2 text-sm font-semibold transition"
-            :class="isDarkMode
-              ? 'border-rose-300/50 bg-rose-900/20 text-rose-100 hover:bg-rose-900/30'
-              : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'"
-            :disabled="!isOnline"
-            @click="confirmDelete"
-          >
-            Confirmer la suppression
-          </button>
-        </div>
-      </article>
-    </div>
+    <DeleteConfirmationModal
+      :is-dark-mode="isDarkMode"
+      :is-online="isOnline"
+      :muted-class="mutedClass"
+      :confirmation="deleteConfirmation"
+      @cancel="closeDeleteConfirmation"
+      @confirm="confirmDelete"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import DeleteConfirmationModal from '~/components/shared/delete-confirmation-modal.vue';
+import ListsSidebarPanel from '~/components/domains/lists/lists-sidebar-panel.vue';
+import TaskDetailPanel from '~/components/domains/tasks/task-detail-panel.vue';
+import TasksPanel from '~/components/domains/tasks/tasks-panel.vue';
 import { useNetworkStatus } from '~/domains/connectivity/application/use-network-status';
 import { useLists } from '~/domains/lists/application/use-lists';
 import { useTasks } from '~/domains/tasks/application/use-tasks';
